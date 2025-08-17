@@ -1,0 +1,22 @@
+[
+  {
+    "text": "Wheat prices stable at Rs 2,100/quintal in Punjab mandis. Good demand from flour mills expected.",
+    "meta": {
+      "source": "agmarknet_prices.pdf",
+      "date": "2024-03-14",
+      "geo": "Punjab",
+      "crop": "wheat",
+      "topic": "market_prices"
+    }
+  },
+  {
+    "text": "Cotton prices increased by 5% to Rs 6,500/quintal. Export demand driving prices higher.",
+    "meta": {
+      "source": "cotton_market_report.pdf",
+      "date": "2024-03-13",
+      "geo": "Gujarat",
+      "crop": "cotton",
+      "topic": "market_prices"
+    }
+  }
+]

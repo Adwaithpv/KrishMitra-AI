@@ -1,0 +1,78 @@
+{
+  "crop_prices": {
+    "wheat": {
+      "current_price": 2100,
+      "currency": "INR/quintal", 
+      "trend": "stable",
+      "market_locations": ["Punjab", "Haryana", "UP"],
+      "peak_season": "April-May",
+      "min_price": 2000,
+      "max_price": 2200,
+      "demand": "high",
+      "price_history": [
+        {"date": "2024-01-01", "price": 2050},
+        {"date": "2024-02-01", "price": 2080},
+        {"date": "2024-03-01", "price": 2100}
+      ]
+    },
+    "rice": {
+      "current_price": 2400,
+      "currency": "INR/quintal",
+      "trend": "increasing", 
+      "market_locations": ["Punjab", "Tamil Nadu", "Andhra Pradesh"],
+      "peak_season": "October-November",
+      "min_price": 2200,
+      "max_price": 2600,
+      "demand": "very_high",
+      "price_history": [
+        {"date": "2024-01-01", "price": 2300},
+        {"date": "2024-02-01", "price": 2350},
+        {"date": "2024-03-01", "price": 2400}
+      ]
+    },
+    "cotton": {
+      "current_price": 6500,
+      "currency": "INR/quintal",
+      "trend": "increasing",
+      "market_locations": ["Gujarat", "Maharashtra", "Telangana"], 
+      "peak_season": "December-February",
+      "min_price": 6000,
+      "max_price": 7000,
+      "demand": "high",
+      "price_history": [
+        {"date": "2024-01-01", "price": 6200},
+        {"date": "2024-02-01", "price": 6350},
+        {"date": "2024-03-01", "price": 6500}
+      ]
+    },
+    "sugarcane": {
+      "current_price": 350,
+      "currency": "INR/quintal",
+      "trend": "stable",
+      "market_locations": ["UP", "Maharashtra", "Karnataka"],
+      "peak_season": "December-March", 
+      "min_price": 320,
+      "max_price": 380,
+      "demand": "stable",
+      "price_history": [
+        {"date": "2024-01-01", "price": 340},
+        {"date": "2024-02-01", "price": 345},
+        {"date": "2024-03-01", "price": 350}
+      ]
+    }
+  },
+  "data_sources": [
+    "AgMarkNet - Agricultural Marketing Division",
+    "Ministry of Agriculture & Farmers Welfare",
+    "National Sample Survey Office (NSSO)",
+    "Commission for Agricultural Costs & Prices (CACP)"
+  ],
+  "last_updated": "2024-03-15",
+  "notes": [
+    "Prices are indicative and may vary by location and quality",
+    "Trends are based on 3-month analysis",
+    "Peak seasons are general guidelines - may vary by region",
+    "Add your own crops following the same structure"
+  ]
+}
+

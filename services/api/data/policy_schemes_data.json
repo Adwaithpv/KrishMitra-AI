@@ -1,0 +1,174 @@
+{
+  "schemes": [
+    {
+      "id": "CENTRAL_PM-KISAN",
+      "type": "Direct Income Support Scheme",
+      "offering_body": "Government of India, Ministry of Agriculture and Farmers Welfare (MoA&FW)",
+      "objective": "To supplement the financial needs of landholding farmer families.",
+      "benefits": "₹6,000 per year, paid in three equal installments of ₹2,000 every four months.",
+      "eligibility": "All landholding farmer families. Exclusions apply to institutional landholders, families with members in constitutional posts, and income tax payers. Mandatory e-KYC is required.",
+      "how_to_apply": [
+        "Online Self-Registration: Visit the official PM-KISAN portal (https://pmkisan.gov.in/). Click on 'New Farmer Registration' in the Farmers Corner. Enter your Aadhaar number, mobile number, select your state, and fill in the required land and personal details.",
+        "Common Service Centre (CSC): Visit your nearest CSC. A Village Level Entrepreneur (VLE) will assist you with the registration process for a nominal fee.",
+        "e-KYC: After registration, completing e-KYC is mandatory. This can be done via an OTP-based process on the portal or through biometric authentication at a CSC."
+      ],
+      "application_link": "https://pmkisan.gov.in/",
+      "tags": ["Direct Income", "Central Government", "All India", "DBT", "Landholder"],
+      "category": "central_government"
+    },
+    {
+      "id": "CENTRAL_PM-KMY",
+      "type": "Pension Scheme",
+      "offering_body": "Government of India, MoA&FW",
+      "objective": "To provide social security and a stable income to farmers in their old age.",
+      "benefits": "A fixed monthly pension of ₹3,000 after reaching the age of 60.",
+      "eligibility": "Small and Marginal Farmers (owning up to 2 hectares of cultivable land). Entry age must be between 18 and 40 years.",
+      "how_to_apply": [
+        "Visit a Common Service Centre (CSC): The primary method is to visit your nearest CSC with your Aadhaar card, bank passbook (or account details), and mobile phone.",
+        "Registration: The VLE at the CSC will fill out the online registration form.",
+        "Authentication & Payment: Your details will be authenticated. The initial contribution amount will be deducted from your bank account via the CSC wallet, and your pension account number (KPYAN) will be generated."
+      ],
+      "application_link": "https://maandhan.in/",
+      "tags": ["Pension", "Social Security", "Central Government", "All India", "Small Farmer"],
+      "category": "central_government"
+    },
+    {
+      "id": "CENTRAL_PMFBY",
+      "type": "Crop Insurance Scheme",
+      "offering_body": "Government of India, MoA&FW",
+      "objective": "To provide comprehensive insurance coverage and financial support to farmers against crop failure.",
+      "benefits": "Insurance cover against losses at all stages of the crop cycle. Farmers pay a low, uniform premium (2% for Kharif, 1.5% for Rabi, 5% for commercial crops).",
+      "eligibility": "All farmers, including tenant farmers and sharecroppers, growing notified crops in notified areas.",
+      "how_to_apply": [
+        "For Loanee Farmers (with KCC): If you have a Kisan Credit Card, the bank will automatically enroll you in the scheme. You have the option to opt-out by submitting a declaration to the bank branch seven days before the cut-off date.",
+        "For Non-Loanee Farmers: You can apply through the nearest bank branch, a licensed insurance agent, a CSC, or directly on the National Crop Insurance Portal (NCIP). You will need your Aadhaar card, bank account details, land records (Patta/Chitta), and a sowing certificate."
+      ],
+      "application_link": "https://pmfby.gov.in/",
+      "tags": ["Crop Insurance", "Risk Mitigation", "Central Government", "All India", "Kharif", "Rabi"],
+      "category": "central_government"
+    },
+    {
+      "id": "CENTRAL_KCC",
+      "type": "Credit Scheme",
+      "offering_body": "Government of India, implemented by all Commercial Banks, RRBs, and Cooperative Banks.",
+      "objective": "To provide farmers with adequate and timely credit through a single window.",
+      "benefits": "Short-term crop loans up to ₹3 lakh at 4% effective interest on prompt repayment. Collateral-free loan limit is ₹2 lakh.",
+      "eligibility": "All farmers, including tenant farmers, SHGs, and JLGs. Also covers animal husbandry and fisheries.",
+      "how_to_apply": [
+        "Visit a Bank Branch: Go to your nearest bank branch (SBI, Bank of Baroda, etc.) and request the KCC application form. Submit the filled form with KYC documents (Aadhaar, PAN card), proof of address, and land documents (Patta, Adangal).",
+        "Apply Online via JanSamarth Portal: Visit https://www.jansamarth.in/, select Agri Credit, and choose Kisan Credit Card. Check eligibility, select a lender, and apply online.",
+        "Bank's Digital Channels: Many banks, like SBI, allow initiating the application through their mobile apps (e.g., YONO)."
+      ],
+      "application_link": "https://www.jansamarth.in/",
+      "tags": ["Credit", "Loan", "Interest Subvention", "Central Government", "All India", "Working Capital"],
+      "category": "central_government"
+    },
+    {
+      "id": "TN_SUGARCANE_INCENTIVE",
+      "type": "Price Support Incentive",
+      "offering_body": "Government of Tamil Nadu",
+      "objective": "To increase the procurement price of sugarcane.",
+      "benefits": "A special incentive of ₹349 per metric ton for the 2024-25 season.",
+      "eligibility": "Farmers registered with and supplying sugarcane to sugar mills in Tamil Nadu.",
+      "how_to_apply": [
+        "No direct application is required. The incentive is calculated based on the sugarcane supply data provided by the registered sugar mills to the government. The amount is then directly credited to the farmer's bank account linked with the sugar mill."
+      ],
+      "application_link": "Contact your sugar mill or District Agriculture Office for information.",
+      "tags": ["Price Support", "Sugarcane", "Tamil Nadu", "State Government", "Incentive"],
+      "category": "state_government"
+    },
+    {
+      "id": "TN_ORGANIC_FARMING",
+      "type": "Input Subsidy Scheme",
+      "offering_body": "Government of Tamil Nadu, Department of Agriculture and Farmers' Welfare",
+      "objective": "To promote organic and natural farming practices.",
+      "benefits": "Up to 50% subsidy on bio-fertilizers, composting units; 40% on organic seeds.",
+      "eligibility": "All farmers in Tamil Nadu transitioning to organic farming.",
+      "how_to_apply": [
+        "Contact District Agriculture Office: Visit your local Assistant Director of Agriculture (ADA) office or Agricultural Officer. They will provide the application form and details of the scheme's implementation in your block.",
+        "UZHAVAR App: Download the 'UZHAVAR - உழவர்' mobile app from the Play Store. Check the 'Subsidies' section for scheme details and application forms.",
+        "Required Documents: You will typically need your Aadhaar card, bank passbook, and land ownership documents (Patta/Chitta)."
+      ],
+      "application_link": "Application via District Agriculture Offices or the UZHAVAR - உழவர் mobile app.",
+      "tags": ["Organic Farming", "Subsidy", "Sustainable Agriculture", "Tamil Nadu", "State Government"],
+      "category": "state_government"
+    },
+    {
+      "id": "TN_MECHANIZATION",
+      "type": "Machinery Subsidy Scheme",
+      "offering_body": "Government of Tamil Nadu, Department of Agricultural Engineering",
+      "objective": "To promote the use of modern farm machinery.",
+      "benefits": "Provides subsidies on various farm equipment.",
+      "eligibility": "All farmers in Tamil Nadu, with higher subsidy rates for small and marginal farmers.",
+      "how_to_apply": [
+        "Online Portal: The primary application method is through the central government's mechanization portal: https://agrimachinery.nic.in/. You need to register as a farmer, select the machinery you want to buy from an empanelled dealer, and apply for the subsidy.",
+        "District Office: You can also contact the office of the Assistant Executive Engineer, Department of Agricultural Engineering in your district for guidance on the application process."
+      ],
+      "application_link": "https://agrimachinery.nic.in/",
+      "tags": ["Mechanization", "Machinery", "Subsidy", "Tamil Nadu", "State Government"],
+      "category": "state_government"
+    },
+    {
+      "id": "BANK_SBI_AGRI_GOLD_LOAN",
+      "type": "Agricultural Loan",
+      "offering_body": "State Bank of India (SBI)",
+      "objective": "To provide quick financing against gold ornaments for agricultural needs.",
+      "benefits": "Provides loans for various agricultural purposes with competitive interest rates.",
+      "eligibility": "Farmers owning gold ornaments with proof of agricultural activity.",
+      "how_to_apply": [
+        "Visit the Branch: Go to the nearest SBI branch with your gold ornaments, KYC documents (Aadhaar, PAN), and proof of land holding/agricultural activity.",
+        "Valuation & Application: The bank will value your gold. You will need to fill out a simple application form.",
+        "Disbursal: The loan is typically sanctioned and disbursed very quickly, often within the same day."
+      ],
+      "application_link": "https://sbi.co.in/web/agri-rural/agriculture-banking/gold-loan",
+      "tags": ["Loan", "Gold Loan", "SBI", "Public Sector Bank", "Credit"],
+      "category": "banking"
+    },
+    {
+      "id": "BANK_AXIS_TRACTOR_LOAN",
+      "type": "Agricultural Loan",
+      "offering_body": "Axis Bank",
+      "objective": "To provide financing for the purchase of new tractors and farm equipment.",
+      "benefits": "Offers attractive interest rates and flexible repayment options.",
+      "eligibility": "Farmers with agricultural land and a stable source of income.",
+      "how_to_apply": [
+        "Online Application: Visit the Axis Bank website, navigate to the Tractor Loan page, and fill out the online application form to have a bank representative contact you.",
+        "Visit a Branch: Go to your nearest Axis Bank branch or loan center with your KYC documents, land records, and a quotation for the tractor from an authorized dealer.",
+        "Dealer Assistance: Often, tractor dealerships have tie-ups with banks and can assist you with the entire loan application process."
+      ],
+      "application_link": "https://www.axisbank.com/agri-and-rural/loans/tractor-loan",
+      "tags": ["Loan", "Tractor", "Mechanization", "Axis Bank", "Private Sector Bank"],
+      "category": "banking"
+    },
+    {
+      "id": "PRIVATE_ITC_MAARS",
+      "type": "Market Linkage & Credit Facilitation Initiative",
+      "offering_body": "ITC Limited (Corporate)",
+      "objective": "To create a 'phygital' ecosystem for market access, advisory, and credit.",
+      "benefits": "Facilitates better price discovery, transparent selling, and easier access to formal credit.",
+      "eligibility": "Farmers within ITC's operational areas.",
+      "how_to_apply": [
+        "Contact Local Representative: Farmers in villages where ITC is active can contact the local 'Sanchalak' (the lead farmer who operates the e-Choupal) or an ITC Agri-Business representative.",
+        "Register on the App: They will guide you on how to register on the ITCMAARS mobile application. Registration gives you access to the platform's services, including market rates, weather information, and linkages to financial partners."
+      ],
+      "application_link": "https://www.itcportal.com/businesses/agri-business/agri-commodities-and-rural-services.aspx",
+      "tags": ["Market Linkage", "Credit Facilitation", "Private Sector", "ITC", "Agri-Tech"],
+      "category": "private_ngo"
+    },
+    {
+      "id": "NGO_WOTR",
+      "type": "Training and Capacity Building Initiative",
+      "offering_body": "Watershed Organisation Trust (NGO)",
+      "objective": "To mitigate climate change impacts through sustainable agriculture and water management.",
+      "benefits": "Provides extensive training to farmers on sustainable agricultural practices.",
+      "eligibility": "Farmers and communities in WOTR's designated project areas.",
+      "how_to_apply": [
+        "Community Engagement: WOTR selects project villages or watersheds for intervention. If they are active in your area, you can participate by joining the Village Development Committees, SHGs, or Farmer Field Schools they organize.",
+        "Contact for Information: You can contact WOTR through their website to inquire if they have any projects planned for your region and express your community's interest in participation."
+      ],
+      "application_link": "https://wotr.org/",
+      "tags": ["NGO", "Training", "Climate Change", "Sustainable Agriculture", "Watershed"],
+      "category": "private_ngo"
+    }
+  ]
+}
