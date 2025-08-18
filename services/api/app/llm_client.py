@@ -43,7 +43,7 @@ class LLMClient:
         print("Using fallback text generation (no LLM)")
         self.local_pipeline = None
     
-    def generate_answer(self, query: str, evidence: List[Dict[str, Any]]) -> str:
+    def generate_answer(self, query: str, evidence: List[Dict[str, Any]], language: str | None = None) -> str:
         """Generate an answer from query and evidence"""
         if not evidence:
             return "I don't have enough information to answer this question."
@@ -52,13 +52,21 @@ class LLMClient:
         evidence_text = self._format_evidence(evidence)
         
         if self.gemini_model:
-            return self._generate_gemini(query, evidence_text)
+            answer = self._generate_gemini(query, evidence_text)
         elif self.local_pipeline:
-            return self._generate_local(query, evidence_text)
+            answer = self._generate_local(query, evidence_text)
         else:
-            return self._generate_fallback(query, evidence_text)
+            answer = self._generate_fallback(query, evidence_text)
+
+        # Translate if requested language is not English
+        if language and language != 'en':
+            try:
+                answer = self._translate_text(answer, language)
+            except Exception:
+                pass
+        return answer
     
-    def generate_text(self, prompt: str) -> str:
+    def generate_text(self, prompt: str, language: str | None = None) -> str:
         """Generate text from a prompt without requiring evidence"""
         if self.gemini_model:
             try:
@@ -69,7 +77,13 @@ class LLMClient:
                         temperature=0.3,
                     )
                 )
-                return response.text.strip()
+                text = response.text.strip()
+                if language and language != 'en':
+                    try:
+                        text = self._translate_text(text, language)
+                    except Exception:
+                        pass
+                return text
             except Exception as e:
                 print(f"Gemini text generation error: {e}")
                 return "Unable to generate response at this time."
@@ -88,7 +102,13 @@ class LLMClient:
                 print(f"Local model text generation error: {e}")
                 return "Unable to generate response."
         else:
-            return "No LLM available for text generation."
+            text = "No LLM available for text generation."
+            if language and language != 'en':
+                try:
+                    text = self._translate_text(text, language)
+                except Exception:
+                    pass
+            return text
 
     def generate_agricultural_analysis(self, custom_prompt: str) -> str:
         """Generate agricultural analysis using a custom detailed prompt"""
@@ -178,3 +198,27 @@ Answer:"""
     def _generate_fallback(self, query: str, evidence: str) -> str:
         """Simple fallback when no LLM is available"""
         return f"Based on the available evidence:\n{evidence}\n\nThis is a summary of relevant information. For more detailed advice, please consult local agricultural experts."
+
+    def _translate_text(self, text: str, language: str) -> str:
+        """Translate English text to target language using the available LLM (best-effort)."""
+        if not text.strip():
+            return text
+        # If Gemini available, request translation; otherwise simple passthrough
+        if self.gemini_model:
+            try:
+                prompt = (
+                    f"Translate the following response from English to {language} (Indian locale if applicable).\n"
+                    f"Preserve meaning and formatting, keep units and numbers.\n\n{text}"
+                )
+                response = self.gemini_model.generate_content(
+                    prompt,
+                    generation_config=genai.types.GenerationConfig(
+                        max_output_tokens=int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "1200")),
+                        temperature=0.2,
+                    ),
+                )
+                return response.text.strip()
+            except Exception as e:
+                print(f"Translation error: {e}")
+                return text
+        return text

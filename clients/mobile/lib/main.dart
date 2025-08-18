@@ -6,6 +6,8 @@ import 'screens/settings_screen.dart';
 import 'providers/agri_provider.dart';
 import 'providers/weather_provider.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'l10n/app_localizations.dart';
 
 void main() {
   runApp(const AgriAdvisorApp());
@@ -21,11 +23,21 @@ class AgriAdvisorApp extends StatelessWidget {
         ChangeNotifierProvider(create: (context) => AgriProvider()),
         ChangeNotifierProvider(create: (context) => WeatherProvider()),
       ],
-      child: MaterialApp(
-        title: 'Agri Advisor',
-        theme: _buildTheme(),
-        home: const _LocationInitializer(child: MainScreen()),
-        debugShowCheckedModeBanner: false,
+      child: Consumer<AgriProvider>(
+        builder: (context, agri, _) => MaterialApp(
+          title: 'Agri Advisor',
+          theme: _buildTheme(),
+          locale: Locale(agri.languageCode),
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          home: const _LocationInitializer(child: MainScreen()),
+          debugShowCheckedModeBanner: false,
+        ),
       ),
     );
   }
@@ -93,21 +105,21 @@ class _MainScreenState extends State<MainScreen> {
       bottomNavigationBar: NavigationBar(
         selectedIndex: _currentIndex,
         onDestinationSelected: (index) => setState(() => _currentIndex = index),
-        destinations: const [
+        destinations: [
           NavigationDestination(
             icon: Icon(Icons.home_outlined),
             selectedIcon: Icon(Icons.home),
-            label: 'Home',
+            label: AppLocalizations.of(context).navHome,
           ),
           NavigationDestination(
             icon: Icon(Icons.history_outlined),
             selectedIcon: Icon(Icons.history),
-            label: 'History',
+            label: AppLocalizations.of(context).navHistory,
           ),
           NavigationDestination(
             icon: Icon(Icons.settings_outlined),
             selectedIcon: Icon(Icons.settings),
-            label: 'Settings',
+            label: AppLocalizations.of(context).navSettings,
           ),
         ],
       ),

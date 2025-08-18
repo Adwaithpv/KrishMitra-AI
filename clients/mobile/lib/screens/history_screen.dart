@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/agri_provider.dart';
+import '../l10n/app_localizations.dart';
 import '../widgets/response_card.dart';
 
 class HistoryScreen extends StatelessWidget {
@@ -8,9 +9,10 @@ class HistoryScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Query History'),
+        title: Text(t.historyTitle),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
         actions: [
@@ -20,19 +22,19 @@ class HistoryScreen extends StatelessWidget {
               showDialog(
                 context: context,
                 builder: (context) => AlertDialog(
-                  title: const Text('Clear History'),
-                  content: const Text('Are you sure you want to clear all query history?'),
+                  title: Text(t.clearHistory),
+                  content: Text(t.areYouSureClearHistory),
                   actions: [
                     TextButton(
                       onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
+                      child: Text(t.cancel),
                     ),
                     TextButton(
                       onPressed: () {
                         Provider.of<AgriProvider>(context, listen: false).clearHistory();
                         Navigator.pop(context);
                       },
-                      child: const Text('Clear'),
+                      child: Text(t.clear),
                     ),
                   ],
                 ),
@@ -44,7 +46,7 @@ class HistoryScreen extends StatelessWidget {
       body: Consumer<AgriProvider>(
         builder: (context, provider, child) {
           if (provider.history.isEmpty) {
-            return const Center(
+            return Center(
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

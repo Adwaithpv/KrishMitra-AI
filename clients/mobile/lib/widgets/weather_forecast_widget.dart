@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import '../providers/weather_provider.dart';
 import '../models/weather_models.dart';
+import '../l10n/app_localizations.dart';
 
 class WeatherForecastWidget extends StatefulWidget {
   const WeatherForecastWidget({super.key});
@@ -63,7 +64,7 @@ class _WeatherForecastWidgetState extends State<WeatherForecastWidget> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
-                'Weather Forecast',
+                AppLocalizations.of(context).weatherForecast,
                 style: Theme.of(context).textTheme.titleLarge?.copyWith(
                       color: Colors.white,
                       fontWeight: FontWeight.bold,
@@ -102,7 +103,7 @@ class _WeatherForecastWidgetState extends State<WeatherForecastWidget> {
               Icons.refresh,
               color: Colors.white,
             ),
-      tooltip: 'Refresh weather data',
+      tooltip: AppLocalizations.of(context).refreshWeatherData,
     );
   }
 
@@ -110,7 +111,7 @@ class _WeatherForecastWidgetState extends State<WeatherForecastWidget> {
     if (provider.hasError) {
       return _buildErrorState(context, provider);
     } else if (provider.isLoading && !provider.hasData) {
-      return _buildLoadingState();
+      return _buildLoadingState(context);
     } else if (provider.hasData) {
       return _buildWeatherData(context, provider);
     } else {
@@ -118,20 +119,20 @@ class _WeatherForecastWidgetState extends State<WeatherForecastWidget> {
     }
   }
 
-  Widget _buildLoadingState() {
-    return const SizedBox(
+  Widget _buildLoadingState(BuildContext context) {
+    return SizedBox(
       height: 200,
       child: Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(
+            const CircularProgressIndicator(
               valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
             ),
-            SizedBox(height: 16),
+            const SizedBox(height: 16),
             Text(
-              'Getting weather forecast...',
-              style: TextStyle(color: Colors.white),
+              AppLocalizations.of(context).gettingWeatherForecast,
+              style: const TextStyle(color: Colors.white),
             ),
           ],
         ),
@@ -164,7 +165,7 @@ class _WeatherForecastWidgetState extends State<WeatherForecastWidget> {
                 backgroundColor: Colors.white,
                 foregroundColor: Theme.of(context).primaryColor,
               ),
-              child: const Text('Try Again'),
+              child: Text(AppLocalizations.of(context).tryAgain),
             ),
           ],
         ),
@@ -185,9 +186,9 @@ class _WeatherForecastWidgetState extends State<WeatherForecastWidget> {
               size: 48,
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Weather data not available',
-              style: TextStyle(color: Colors.white),
+            Text(
+              AppLocalizations.of(context).weatherDataNotAvailable,
+              style: const TextStyle(color: Colors.white),
             ),
             const SizedBox(height: 16),
             ElevatedButton(
@@ -196,7 +197,7 @@ class _WeatherForecastWidgetState extends State<WeatherForecastWidget> {
                 backgroundColor: Colors.white,
                 foregroundColor: Theme.of(context).primaryColor,
               ),
-              child: const Text('Get Weather'),
+              child: Text(AppLocalizations.of(context).getWeather),
             ),
           ],
         ),
@@ -246,7 +247,7 @@ class _WeatherForecastWidgetState extends State<WeatherForecastWidget> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            'Today',
+                            AppLocalizations.of(context).today,
                             style: Theme.of(context).textTheme.titleMedium?.copyWith(
                                   color: Colors.white,
                                   fontWeight: FontWeight.bold,
@@ -269,19 +270,19 @@ class _WeatherForecastWidgetState extends State<WeatherForecastWidget> {
                     _buildWeatherStat(
                       Icons.thermostat,
                       '${today.avgTemp.round()}°C',
-                      'Temperature',
+                      AppLocalizations.of(context).temperature,
                     ),
                     const SizedBox(width: 16),
                     _buildWeatherStat(
                       Icons.water_drop,
                       '${today.chanceOfRain.round()}%',
-                      'Rain chance',
+                      AppLocalizations.of(context).rainChance,
                     ),
                     const SizedBox(width: 16),
                     _buildWeatherStat(
                       Icons.air,
                       '${today.windSpeed.round()} km/h',
-                      'Wind',
+                      AppLocalizations.of(context).wind,
                     ),
                   ],
                 ),
@@ -328,7 +329,7 @@ class _WeatherForecastWidgetState extends State<WeatherForecastWidget> {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '7-Day Forecast',
+          AppLocalizations.of(context).sevenDayForecast,
           style: Theme.of(context).textTheme.titleMedium?.copyWith(
                 color: Colors.white,
                 fontWeight: FontWeight.bold,

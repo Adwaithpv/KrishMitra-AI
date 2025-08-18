@@ -403,7 +403,13 @@ def _run_query(q: Query, request=None):
     else:
         # Fall back to LLM generation with static RAG evidence
         llm_client = get_llm_client()
-        answer = llm_client.generate_answer(q.text, evidence)
+        # Language preference via header 'Accept-Language' (e.g., 'hi')
+        language = None
+        if request:
+            language = request.headers.get('Accept-Language')
+            if language:
+                language = language.split(',')[0].split('-')[0].strip()
+        answer = llm_client.generate_answer(q.text, evidence, language=language)
         agent_used = "llm"
         confidence = round(confidence, 3)
     
@@ -438,6 +444,20 @@ def _run_query(q: Query, request=None):
         success=True
     )
     
+    # If we used supervisor, optionally translate supervisor answer as well
+    if supervisor_confidence > confidence_threshold or agents_consulted or supervisor_session_id:
+        try:
+            language = None
+            if request:
+                language = request.headers.get('Accept-Language')
+                if language:
+                    language = language.split(',')[0].split('-')[0].strip()
+            if language and language != 'en':
+                llm_client = get_llm_client()
+                answer = llm_client._translate_text(answer, language)
+        except Exception:
+            pass
+
     result = {
         "answer": answer, 
         "evidence": evidence, 

@@ -10,6 +10,7 @@ import '../widgets/weather_forecast_widget.dart';
 import '../widgets/response_card.dart';
 import '../models/chat_message.dart';
 import '../widgets/chat_bubble.dart';
+import '../l10n/app_localizations.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -42,14 +43,27 @@ class _HomeScreenState extends State<HomeScreen> {
     if (!available) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Speech recognition not available')),
+          SnackBar(content: Text(AppLocalizations.of(context).speechRecognitionNotAvailable)),
         );
       }
     }
   }
 
   Future<void> _initializeTts() async {
-    await _flutterTts.setLanguage("en-US");
+    final lang = Localizations.localeOf(context).languageCode;
+    final ttsLang = {
+      'en': 'en-US',
+      'hi': 'hi-IN',
+      'ta': 'ta-IN',
+      'te': 'te-IN',
+      'bn': 'bn-IN',
+      'mr': 'mr-IN',
+      'kn': 'kn-IN',
+      'gu': 'gu-IN',
+      'pa': 'pa-IN',
+      'ml': 'ml-IN',
+    }[lang] ?? 'en-US';
+    await _flutterTts.setLanguage(ttsLang);
     await _flutterTts.setSpeechRate(0.5);
     await _flutterTts.setVolume(1.0);
     await _flutterTts.setPitch(1.0);
@@ -92,12 +106,26 @@ class _HomeScreenState extends State<HomeScreen> {
         setState(() {
           _isListening = true;
         });
+        final lang = Localizations.localeOf(context).languageCode;
+        final sttLocale = {
+          'en': 'en_US',
+          'hi': 'hi_IN',
+          'ta': 'ta_IN',
+          'te': 'te_IN',
+          'bn': 'bn_IN',
+          'mr': 'mr_IN',
+          'kn': 'kn_IN',
+          'gu': 'gu_IN',
+          'pa': 'pa_IN',
+          'ml': 'ml_IN',
+        }[lang];
         await _speechToText.listen(
           onResult: (result) {
             setState(() {
               _queryController.text = result.recognizedWords;
             });
           },
+          localeId: sttLocale,
         );
       }
     }
@@ -120,6 +148,21 @@ class _HomeScreenState extends State<HomeScreen> {
       }
       return;
     }
+    // Ensure TTS language matches current app locale before speaking
+    final lang = Localizations.localeOf(context).languageCode;
+    final ttsLang = {
+      'en': 'en-US',
+      'hi': 'hi-IN',
+      'ta': 'ta-IN',
+      'te': 'te-IN',
+      'bn': 'bn-IN',
+      'mr': 'mr-IN',
+      'kn': 'kn-IN',
+      'gu': 'gu-IN',
+      'pa': 'pa-IN',
+      'ml': 'ml-IN',
+    }[lang] ?? 'en-US';
+    await _flutterTts.setLanguage(ttsLang);
     await _flutterTts.speak(text);
   }
 
@@ -146,11 +189,11 @@ class _HomeScreenState extends State<HomeScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Agri Advisor'),
+        title: Text(AppLocalizations.of(context).homeTitle),
         actions: [
           // Debug mode toggle
           IconButton(
-            tooltip: _debugMode ? 'Disable Debug Mode' : 'Enable Debug Mode',
+            tooltip: _debugMode ? AppLocalizations.of(context).debugDisabled : AppLocalizations.of(context).debugEnabled,
             icon: Icon(
               _debugMode ? Icons.bug_report : Icons.bug_report_outlined,
               color: _debugMode ? Colors.orange : null,
@@ -161,7 +204,7 @@ class _HomeScreenState extends State<HomeScreen> {
               });
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
-                  content: Text(_debugMode ? 'Debug Mode Enabled - Testing Supervisor' : 'Debug Mode Disabled'),
+                  content: Text(_debugMode ? AppLocalizations.of(context).debugEnabled : AppLocalizations.of(context).debugDisabled),
                   duration: const Duration(seconds: 2),
                 ),
               );
@@ -190,9 +233,9 @@ class _HomeScreenState extends State<HomeScreen> {
                     Icons.wb_sunny_outlined,
                     color: Theme.of(context).colorScheme.primary,
                   ),
-                  title: const Text(
-                    'Weather & forecast',
-                    style: TextStyle(fontWeight: FontWeight.w600),
+                  title: Text(
+                    AppLocalizations.of(context).weatherAndForecast,
+                    style: const TextStyle(fontWeight: FontWeight.w600),
                   ),
                   children: const [
                     WeatherForecastWidget(),
@@ -224,7 +267,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       await Clipboard.setData(ClipboardData(text: msg.text));
                                       if (context.mounted) {
                                         ScaffoldMessenger.of(context).showSnackBar(
-                                          const SnackBar(content: Text('Copied to clipboard')),
+                                          SnackBar(content: Text(AppLocalizations.of(context).copiedToClipboard)),
                                         );
                                       }
                                     },
@@ -266,13 +309,13 @@ class _HomeScreenState extends State<HomeScreen> {
                             ),
                             onPressed: () => _openCropPicker(context),
                             icon: const Icon(Icons.agriculture_outlined, size: 18),
-                            label: Text(provider.userCrop != null ? provider.userCrop! : 'Crop'),
+                            label: Text(provider.userCrop != null ? provider.userCrop! : AppLocalizations.of(context).crop),
                           ),
                           const SizedBox(width: 8),
                           FilterChip(
                             selected: _showSuggestions,
                             onSelected: (v) => setState(() => _showSuggestions = v),
-                            label: const Text('Suggestions'),
+                            label: Text(AppLocalizations.of(context).suggestions),
                             avatar: const Icon(Icons.bolt, size: 16),
                           ),
                         ],
@@ -291,20 +334,20 @@ class _HomeScreenState extends State<HomeScreen> {
                         minLines: 1,
                         maxLines: 5,
                         decoration: InputDecoration(
-                          hintText: 'Type your message...',
+                          hintText: AppLocalizations.of(context).typeMessage,
                           filled: true,
                           prefixIcon: const Icon(Icons.chat_outlined),
                           suffixIcon: Row(
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               IconButton(
-                                tooltip: _isListening ? 'Stop voice input' : 'Voice input',
+                                tooltip: _isListening ? AppLocalizations.of(context).stopVoiceInputTooltip : AppLocalizations.of(context).voiceInputTooltip,
                                 icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
                                 onPressed: _isListening ? _stopListening : _startListening,
                                 color: _isListening ? Colors.red : null,
                               ),
                               IconButton(
-                                tooltip: 'Send',
+                                tooltip: AppLocalizations.of(context).send,
                                 icon: const Icon(Icons.send),
                                 onPressed: provider.isLoading ? null : _sendQuery,
                               ),

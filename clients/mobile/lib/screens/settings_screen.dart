@@ -1,15 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../providers/agri_provider.dart';
+import '../l10n/app_localizations.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
+    final t = AppLocalizations.of(context);
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: Text(t.settingsTitle),
         backgroundColor: Colors.green,
         foregroundColor: Colors.white,
       ),
@@ -25,8 +27,8 @@ class SettingsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Profile',
+                      Text(
+                        t.profile,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -37,7 +39,7 @@ class SettingsScreen extends StatelessWidget {
                       // Location Information (auto-detected)
                       ListTile(
                         leading: const Icon(Icons.location_on),
-                        title: const Text('Current Location'),
+                        title: Text(t.currentLocation),
                         subtitle: Text(provider.userLocation ?? 'Auto-detecting...'),
                         trailing: const Icon(Icons.gps_fixed, color: Colors.green),
                         onTap: null, // Disabled since location is auto-detected
@@ -46,12 +48,20 @@ class SettingsScreen extends StatelessWidget {
                       // Crop Setting
                       ListTile(
                         leading: const Icon(Icons.agriculture),
-                        title: const Text('Primary Crop'),
+                        title: Text(t.primaryCrop),
                         subtitle: Text(provider.userCrop ?? 'Not set'),
                         trailing: const Icon(Icons.arrow_forward_ios),
                         onTap: () {
                           _showCropDialog(context, provider);
                         },
+                      ),
+                      const SizedBox(height: 8),
+                      ListTile(
+                        leading: const Icon(Icons.language),
+                        title: Text(t.language),
+                        subtitle: Text(_languageName(provider.languageCode)),
+                        trailing: const Icon(Icons.arrow_forward_ios),
+                        onTap: () => _showLanguageDialog(context, provider),
                       ),
                     ],
                   ),
@@ -67,8 +77,8 @@ class SettingsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'App Settings',
+                      Text(
+                        t.appSettings,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -78,8 +88,8 @@ class SettingsScreen extends StatelessWidget {
                       
                       // Voice Settings
                       SwitchListTile(
-                        title: const Text('Voice Input'),
-                        subtitle: const Text('Enable speech-to-text'),
+                        title: Text(t.voiceInput),
+                        subtitle: Text(t.voiceInputSubtitle),
                         value: true, // TODO: Implement voice settings
                         onChanged: (value) {
                           // TODO: Save voice setting
@@ -87,8 +97,8 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       
                       SwitchListTile(
-                        title: const Text('Voice Output'),
-                        subtitle: const Text('Enable text-to-speech'),
+                        title: Text(t.voiceOutput),
+                        subtitle: Text(t.voiceOutputSubtitle),
                         value: true, // TODO: Implement voice settings
                         onChanged: (value) {
                           // TODO: Save voice setting
@@ -96,8 +106,8 @@ class SettingsScreen extends StatelessWidget {
                       ),
                       
                       SwitchListTile(
-                        title: const Text('Offline Mode'),
-                        subtitle: const Text('Use cached responses when offline'),
+                        title: Text(t.offlineMode),
+                        subtitle: Text(t.offlineModeSubtitle),
                         value: false, // TODO: Implement offline mode
                         onChanged: (value) {
                           // TODO: Save offline setting
@@ -117,8 +127,8 @@ class SettingsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Data Management',
+                      Text(
+                        t.dataManagement,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -128,28 +138,28 @@ class SettingsScreen extends StatelessWidget {
                       
                       ListTile(
                         leading: const Icon(Icons.clear_all),
-                        title: const Text('Clear Query History'),
-                        subtitle: const Text('Delete all stored queries'),
+                        title: Text(t.clearQueryHistory),
+                        subtitle: Text(t.deleteAllStoredQueries),
                         onTap: () {
                           showDialog(
                             context: context,
                             builder: (context) => AlertDialog(
-                              title: const Text('Clear History'),
-                              content: const Text('Are you sure you want to clear all query history?'),
+                              title: Text(t.clearHistory),
+                              content: Text(t.areYouSureClearHistory),
                               actions: [
                                 TextButton(
                                   onPressed: () => Navigator.pop(context),
-                                  child: const Text('Cancel'),
+                                  child: Text(t.cancel),
                                 ),
                                 TextButton(
                                   onPressed: () {
                                     provider.clearHistory();
                                     Navigator.pop(context);
                                     ScaffoldMessenger.of(context).showSnackBar(
-                                      const SnackBar(content: Text('History cleared')),
+                                      SnackBar(content: Text(t.historyCleared)),
                                     );
                                   },
-                                  child: const Text('Clear'),
+                                  child: Text(t.clear),
                                 ),
                               ],
                             ),
@@ -170,8 +180,8 @@ class SettingsScreen extends StatelessWidget {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'About',
+                      Text(
+                        t.about,
                         style: TextStyle(
                           fontSize: 18,
                           fontWeight: FontWeight.bold,
@@ -181,13 +191,13 @@ class SettingsScreen extends StatelessWidget {
                       
                       ListTile(
                         leading: const Icon(Icons.info),
-                        title: const Text('Version'),
+                        title: Text(t.version),
                         subtitle: const Text('1.0.0'),
                       ),
                       
                       ListTile(
                         leading: const Icon(Icons.description),
-                        title: const Text('Privacy Policy'),
+                        title: Text(t.privacyPolicy),
                         trailing: const Icon(Icons.arrow_forward_ios),
                         onTap: () {
                           // TODO: Show privacy policy
@@ -196,7 +206,7 @@ class SettingsScreen extends StatelessWidget {
                       
                       ListTile(
                         leading: const Icon(Icons.help),
-                        title: const Text('Help & Support'),
+                        title: Text(t.helpSupport),
                         trailing: const Icon(Icons.arrow_forward_ios),
                         onTap: () {
                           // TODO: Show help
@@ -219,7 +229,7 @@ class SettingsScreen extends StatelessWidget {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Select Primary Crop'),
+        title: Text(AppLocalizations.of(context).selectPrimaryCrop),
         content: SizedBox(
           width: double.maxFinite,
           child: ListView(
@@ -238,5 +248,60 @@ class SettingsScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+
+  void _showLanguageDialog(BuildContext context, AgriProvider provider) {
+    final t = AppLocalizations.of(context);
+    final languages = <String, String>{
+      'en': 'English',
+      'hi': 'हिंदी',
+      'ta': 'தமிழ்',
+      'te': 'తెలుగు',
+      'bn': 'বাংলা',
+      'mr': 'मराठी',
+      'kn': 'ಕನ್ನಡ',
+      'gu': 'ગુજરાતી',
+      'pa': 'ਪੰਜਾਬੀ',
+      'ml': 'മലയാളം',
+    };
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(t.selectLanguage),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: ListView(
+            shrinkWrap: true,
+            children: languages.entries.map((e) => RadioListTile<String>(
+              value: e.key,
+              groupValue: provider.languageCode,
+              onChanged: (val) async {
+                if (val != null) {
+                  await provider.setLanguageCode(val);
+                  if (context.mounted) Navigator.pop(context);
+                }
+              },
+              title: Text(e.value),
+            )).toList(),
+          ),
+        ),
+      ),
+    );
+  }
+
+  String _languageName(String code) {
+    const map = {
+      'en': 'English',
+      'hi': 'हिंदी',
+      'ta': 'தமிழ்',
+      'te': 'తెలుగు',
+      'bn': 'বাংলা',
+      'mr': 'मराठी',
+      'kn': 'ಕನ್ನಡ',
+      'gu': 'ગુજરાતી',
+      'pa': 'ਪੰਜਾਬੀ',
+      'ml': 'മലയാളം',
+    };
+    return map[code] ?? code;
   }
 }

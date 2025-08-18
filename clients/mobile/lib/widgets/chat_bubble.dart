@@ -3,6 +3,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import '../models/chat_message.dart';
 import '../models/query_response.dart';
 import 'response_card.dart';
+import '../l10n/app_localizations.dart';
 
 class ChatBubble extends StatelessWidget {
   final ChatMessage message;
@@ -57,7 +58,7 @@ class ChatBubble extends StatelessWidget {
                 child: Icon(Icons.agriculture, color: theme.colorScheme.primary, size: 18),
               ),
               const SizedBox(width: 8),
-              Text('Agri Advisor', style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary)),
+              Text(AppLocalizations.of(context).appTitle, style: theme.textTheme.labelLarge?.copyWith(color: theme.colorScheme.primary)),
             ],
           ),
           const SizedBox(height: 8),
@@ -82,7 +83,7 @@ class ChatBubble extends StatelessWidget {
             children: [
               if (onCopy != null)
                 IconButton(
-                  tooltip: 'Copy',
+                  tooltip: AppLocalizations.of(context).copy,
                   icon: const Icon(Icons.copy_all_outlined, size: 18),
                   onPressed: onCopy,
                   padding: EdgeInsets.zero,
@@ -92,7 +93,7 @@ class ChatBubble extends StatelessWidget {
                 Padding(
                   padding: const EdgeInsets.only(left: 8.0),
                   child: IconButton(
-                    tooltip: 'Speak',
+                    tooltip: AppLocalizations.of(context).speak,
                     icon: Icon(
                       isSpeaking ? Icons.stop_circle_outlined : Icons.volume_up_outlined,
                       size: 18,
@@ -183,7 +184,7 @@ class _DetailsButton extends StatelessWidget {
         );
       },
       icon: const Icon(Icons.info_outline, size: 16),
-      label: const Text('Details'),
+      label: Text(AppLocalizations.of(context).details),
     );
   }
 }

@@ -19,11 +19,13 @@ class AgriProvider with ChangeNotifier {
   UserLocation? _detectedLocation; // GPS location data
   final WeatherService _weatherService = WeatherService();
   String? _sessionId;
+  String _languageCode = 'en';
 
   bool get isLoading => _isLoading;
   String get error => _error;
   List<QueryResponse> get history => _history;
   List<ChatMessage> get messages => _messages;
+  String get languageCode => _languageCode;
   Future<void> _ensureSession() async {
     if (_sessionId != null) return;
     final prefs = await SharedPreferences.getInstance();
@@ -32,10 +34,12 @@ class AgriProvider with ChangeNotifier {
       _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
       await prefs.setString('session_id', _sessionId!);
     }
+    _languageCode = prefs.getString('language_code') ?? 'en';
   }
 
   Map<String, String> _headersWithSession() => {
         'X-Session-ID': _sessionId ?? '',
+        'Accept-Language': _languageCode,
       };
   String? get userLocation => _userLocation;
   String? get userCrop => _userCrop;
@@ -50,10 +54,26 @@ class AgriProvider with ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> setLanguageCode(String code) async {
+    _languageCode = code;
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('language_code', code);
+    notifyListeners();
+  }
+
   /// Initialize location detection when app starts
   Future<void> initializeLocation() async {
     try {
       print('🌍 AgriProvider: Initializing location detection...');
+      // Load saved preferences (e.g., language)
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        final savedLang = prefs.getString('language_code');
+        if (savedLang != null && savedLang.isNotEmpty && savedLang != _languageCode) {
+          _languageCode = savedLang;
+          notifyListeners();
+        }
+      } catch (_) {}
       final location = await _weatherService.getCurrentLocation();
       
       if (location != null) {

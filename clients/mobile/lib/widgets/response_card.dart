@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../models/query_response.dart';
+import '../l10n/app_localizations.dart';
 
 class ResponseCard extends StatelessWidget {
   final QueryResponse response;
@@ -30,7 +31,7 @@ class ResponseCard extends StatelessWidget {
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Agri Advisor Response',
+                  AppLocalizations.of(context).agriAdvisorResponse,
                   style: theme.textTheme.titleMedium?.copyWith(
                     fontWeight: FontWeight.bold,
                     color: theme.colorScheme.primary,
@@ -39,19 +40,19 @@ class ResponseCard extends StatelessWidget {
                 Row(
                   children: [
                     IconButton(
-                      tooltip: 'Copy',
+                      tooltip: AppLocalizations.of(context).copy,
                       icon: const Icon(Icons.copy_all_outlined, size: 20),
                       onPressed: () async {
                         await Clipboard.setData(ClipboardData(text: response.answer));
                         if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(content: Text('Copied to clipboard')),
+                            SnackBar(content: Text(AppLocalizations.of(context).copiedToClipboard)),
                           );
                         }
                       },
                     ),
                     IconButton(
-                      tooltip: 'Speak',
+                      tooltip: AppLocalizations.of(context).speak,
                       icon: Icon(
                         isSpeaking ? Icons.volume_up : Icons.volume_up_outlined,
                         color: isSpeaking ? theme.colorScheme.primary : null,
@@ -293,14 +294,14 @@ class ResponseCard extends StatelessWidget {
                     size: 24,
                   ),
                   title: Text(
-                    'Supporting Evidence (${response.evidence.length})',
+                    '${AppLocalizations.of(context).supportingEvidence} (${response.evidence.length})',
                     style: theme.textTheme.titleMedium?.copyWith(
                       fontWeight: FontWeight.w600,
                       color: theme.colorScheme.primary,
                     ),
                   ),
                   subtitle: Text(
-                    'Tap to view sources and references',
+                    AppLocalizations.of(context).tapToViewSources,
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
                     ),
@@ -346,7 +347,7 @@ class ResponseCard extends StatelessWidget {
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Text(
-                                      evidence.source ?? 'Agricultural Database',
+                                      evidence.source ?? AppLocalizations.of(context).agriDatabase,
                                       style: theme.textTheme.titleSmall?.copyWith(
                                         fontWeight: FontWeight.w600,
                                         color: theme.colorScheme.primary,
