@@ -1,5 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:http/http.dart' as http;
+import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/query_response.dart';
 import '../models/weather_models.dart';
@@ -15,10 +16,24 @@ class AgriProvider with ChangeNotifier {
   String? _userCrop;
   UserLocation? _detectedLocation; // GPS location data
   final WeatherService _weatherService = WeatherService();
+  String? _sessionId;
 
   bool get isLoading => _isLoading;
   String get error => _error;
   List<QueryResponse> get history => _history;
+  Future<void> _ensureSession() async {
+    if (_sessionId != null) return;
+    final prefs = await SharedPreferences.getInstance();
+    _sessionId = prefs.getString('session_id');
+    if (_sessionId == null || _sessionId!.isEmpty) {
+      _sessionId = DateTime.now().millisecondsSinceEpoch.toString();
+      await prefs.setString('session_id', _sessionId!);
+    }
+  }
+
+  Map<String, String> _headersWithSession() => {
+        'X-Session-ID': _sessionId ?? '',
+      };
   String? get userLocation => _userLocation;
   String? get userCrop => _userCrop;
 
@@ -76,6 +91,7 @@ class AgriProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      await _ensureSession();
       final params = <String, String>{
         'text': query,
       };
@@ -90,7 +106,9 @@ class AgriProvider with ChangeNotifier {
       print('🌍 AgriProvider: Sending query with location: ${params['location']}');
 
       final uri = Uri.parse('$baseUrl/query').replace(queryParameters: params);
-      final response = await http.get(uri).timeout(const Duration(seconds: 30));
+      final response = await http
+          .get(uri, headers: _headersWithSession())
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -120,6 +138,7 @@ class AgriProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      await _ensureSession();
       final params = <String, String>{
         'text': query,
       };
@@ -134,7 +153,9 @@ class AgriProvider with ChangeNotifier {
       print('🌍 AgriProvider: Sending testAgents with location: ${params['location']}');
 
       final uri = Uri.parse('$baseUrl/agents').replace(queryParameters: params);
-      final response = await http.get(uri).timeout(const Duration(seconds: 30));
+      final response = await http
+          .get(uri, headers: _headersWithSession())
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
@@ -165,6 +186,7 @@ class AgriProvider with ChangeNotifier {
     notifyListeners();
 
     try {
+      await _ensureSession();
       final params = <String, String>{
         'text': query,
       };
@@ -179,7 +201,9 @@ class AgriProvider with ChangeNotifier {
       print('🔍 AgriProvider: Testing supervisor with location: ${params['location']}');
 
       final uri = Uri.parse('$baseUrl/supervisor').replace(queryParameters: params);
-      final response = await http.get(uri).timeout(const Duration(seconds: 30));
+      final response = await http
+          .get(uri, headers: _headersWithSession())
+          .timeout(const Duration(seconds: 30));
 
       if (response.statusCode == 200) {
         final data = json.decode(response.body);

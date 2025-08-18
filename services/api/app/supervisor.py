@@ -908,17 +908,32 @@ RESPOND WITH EXACTLY THIS JSON FORMAT:
         """Execute the selected agent with session awareness"""
         reasoning = selection_result.get("reasoning", "LLM selection")
         confidence = selection_result.get("confidence", 0.8)
+        # Fetch conversation context to pass downstream
+        try:
+            from .conversation_context import conversation_manager
+            context_info = conversation_manager.get_context_for_routing(session_id) if session_id else {}
+        except Exception:
+            context_info = {}
         
         # Execute the selected agent
         if selected_agent == "weather":
-            response = self.agents["weather"].process_query(query, location, crop)
+            # Pass context if agent supports it
+            if hasattr(self.agents["weather"], 'process_query'):
+                import inspect
+                sig = inspect.signature(self.agents["weather"].process_query)
+                if 'context' in sig.parameters:
+                    response = self.agents["weather"].process_query(query, location, crop, context=context_info)
+                else:
+                    response = self.agents["weather"].process_query(query, location, crop)
             agent_name = "weather_agent"
         elif selected_agent == "finance":
             # Pass session_id to finance agent for session management
             if hasattr(self.agents["finance"], 'process_query'):
                 import inspect
                 sig = inspect.signature(self.agents["finance"].process_query)
-                if 'session_id' in sig.parameters:
+                if 'session_id' in sig.parameters and 'context' in sig.parameters:
+                    response = self.agents["finance"].process_query(query, location, crop, session_id, context_info)
+                elif 'session_id' in sig.parameters:
                     response = self.agents["finance"].process_query(query, location, crop, session_id)
                 else:
                     response = self.agents["finance"].process_query(query, location, crop)
@@ -926,10 +941,26 @@ RESPOND WITH EXACTLY THIS JSON FORMAT:
                 response = self.agents["finance"].process_query(query, location, crop)
             agent_name = "finance_agent"
         elif selected_agent == "policy":
-            response = self.agents["policy"].process_query(query, location, crop)
+            if hasattr(self.agents["policy"], 'process_query'):
+                import inspect
+                sig = inspect.signature(self.agents["policy"].process_query)
+                if 'context' in sig.parameters:
+                    response = self.agents["policy"].process_query(query, location, crop, context=context_info)
+                else:
+                    response = self.agents["policy"].process_query(query, location, crop)
+            else:
+                response = self.agents["policy"].process_query(query, location, crop)
             agent_name = "policy_agent"
         else:  # Default to crop agent
-            response = self.agents["crop"].process_query(query, location, crop)
+            if hasattr(self.agents["crop"], 'process_query'):
+                import inspect
+                sig = inspect.signature(self.agents["crop"].process_query)
+                if 'context' in sig.parameters:
+                    response = self.agents["crop"].process_query(query, location, crop, context=context_info)
+                else:
+                    response = self.agents["crop"].process_query(query, location, crop)
+            else:
+                response = self.agents["crop"].process_query(query, location, crop)
             agent_name = "crop_agent"
         
         # Add LLM routing metadata to response

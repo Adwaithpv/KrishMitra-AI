@@ -4,7 +4,7 @@ Policy Agent for agricultural policy and scheme advice
 
 import json
 import os
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 
@@ -27,7 +27,7 @@ class PolicyAgent:
             print(f"Error loading schemes data: {e}")
             return {"schemes": []}
     
-    def process_query(self, query: str, location: str = None, crop: str = None) -> Dict[str, Any]:
+    def process_query(self, query: str, location: str = None, crop: str = None, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Process policy-related queries using structured data"""
         query_lower = query.lower()
         
@@ -35,10 +35,18 @@ class PolicyAgent:
         relevant_schemes = self._search_schemes(query_lower, location, crop)
         
         if not relevant_schemes:
-            return self._get_general_policy_advice()
+            resp = self._get_general_policy_advice()
+            if context and context.get("conversation_summary"):
+                pref = f"### Context\n{context.get('conversation_summary')}\n\n"
+                resp["result"]["advice"] = pref + resp["result"]["advice"]
+            return resp
         
         # Return the most relevant scheme(s)
-        return self._format_scheme_response(relevant_schemes, query_lower)
+        result = self._format_scheme_response(relevant_schemes, query_lower)
+        if context and context.get("conversation_summary"):
+            pref = f"### Context\n{context.get('conversation_summary')}\n\n"
+            result["result"]["advice"] = pref + result["result"]["advice"]
+        return result
     
     def _search_schemes(self, query: str, location: str = None, crop: str = None) -> List[Dict[str, Any]]:
         """Search for relevant schemes based on query keywords"""

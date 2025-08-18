@@ -35,17 +35,23 @@ class WeatherAgent:
                     self.llm_client = None
         return self.llm_client
     
-    def process_query(self, query: str, location: str = None, crop: str = None) -> Dict[str, Any]:
+    def process_query(self, query: str, location: str = None, crop: str = None, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Process weather-related queries with LLM-powered analysis of real weather data"""
         
         # Get real weather data
         weather_data = self._get_weather_data(location)
         
         if not weather_data:
-            return self._generate_fallback_response(query, location, crop)
+            base = self._generate_fallback_response(query, location, crop)
+            if context and context.get("conversation_summary"):
+                base["result"]["advice"] = f"### Context\n{context.get('conversation_summary')}\n\n" + base["result"]["advice"]
+            return base
         
         # Use LLM to analyze weather data and generate agricultural advice
-        return self._analyze_weather_with_llm(query, weather_data, location, crop)
+        result = self._analyze_weather_with_llm(query, weather_data, location, crop)
+        if context and context.get("conversation_summary"):
+            result["result"]["advice"] = f"### Context\n{context.get('conversation_summary')}\n\n" + result["result"]["advice"]
+        return result
     
     def _extract_coordinates(self, location: str) -> Optional[tuple]:
         """Extract coordinates from location string"""

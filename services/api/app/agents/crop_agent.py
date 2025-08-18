@@ -1,8 +1,8 @@
-"""
+r"""
 Crop Agent for crop-specific agricultural advice
 """
 
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 
@@ -10,7 +10,7 @@ class CropAgent:
     def __init__(self):
         self.name = "crop_agent"
     
-    def process_query(self, query: str, location: str = None, crop: str = None) -> Dict[str, Any]:
+    def process_query(self, query: str, location: str = None, crop: str = None, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Process crop-related queries"""
         query_lower = query.lower()
         
@@ -32,6 +32,13 @@ class CropAgent:
         
         # General crop advice
         else:
+            # Use context_summary if provided to tailor general advice
+            if context and context.get("conversation_summary"):
+                base = self._get_general_crop_advice(location, crop)
+                summary = context.get("conversation_summary", "")
+                pref = f"### Context\n{summary}\n\n"
+                base["result"]["advice"] = pref + base["result"]["advice"]
+                return base
             return self._get_general_crop_advice(location, crop)
     
     def _get_irrigation_advice(self, location: str, crop: str) -> Dict[str, Any]:

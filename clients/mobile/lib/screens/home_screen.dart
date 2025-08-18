@@ -132,158 +132,141 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Consumer<AgriProvider>(
         builder: (context, provider, child) {
-          return SingleChildScrollView(
-            padding: const EdgeInsets.all(16),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Welcome Card
-                const _WelcomeCard(),
-                
-                const SizedBox(height: 24),
-                
-                // Weather Forecast Widget
-                const WeatherForecastWidget(),
-                
-                const SizedBox(height: 24),
-                
-                // Ask Agri Advisor Section
-                Row(
-                  children: [
-                    Text(
-                      'Ask Agri Advisor',
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
+          return Column(
+            children: [
+              // Compact weather section (expandable)
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
+                child: ExpansionTile(
+                  tilePadding: EdgeInsets.zero,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  leading: Icon(
+                    Icons.wb_sunny_outlined,
+                    color: Theme.of(context).colorScheme.primary,
+                  ),
+                  title: const Text(
+                    'Weather & forecast',
+                    style: TextStyle(fontWeight: FontWeight.w600),
+                  ),
+                  children: const [
+                    WeatherForecastWidget(),
+                  ],
+                ),
+              ),
+              // Chat list fills available space
+              Expanded(
+                child: provider.history.isEmpty
+                    ? const _EmptyState()
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                        reverse: true,
+                        itemCount: provider.history.length,
+                        itemBuilder: (context, index) {
+                          final response = provider.history[provider.history.length - 1 - index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 8),
+                            child: ResponseCard(
+                              response: response,
+                              onSpeak: () => _speakText(response.answer),
+                              isSpeaking: _isSpeaking,
+                            ),
+                          );
+                        },
                       ),
-                    ),
-                    if (_debugMode) ...[
-                      const SizedBox(width: 8),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                        decoration: BoxDecoration(
-                          color: Colors.orange.withOpacity(0.2),
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: Colors.orange),
+              ),
+              if (provider.isLoading)
+                const LinearProgressIndicator(minHeight: 2),
+              // Input area pinned to bottom
+              SafeArea(
+                top: false,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).scaffoldBackgroundColor,
+                    boxShadow: const [
+                      BoxShadow(
+                        color: Colors.black12,
+                        blurRadius: 8,
+                        offset: Offset(0, -2),
+                      )
+                    ],
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Crop selection (kept, but compact)
+                      DropdownButtonFormField<String>(
+                        isDense: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Crop',
+                          prefixIcon: Icon(Icons.agriculture_outlined),
                         ),
-                        child: Text(
-                          'DEBUG MODE',
-                          style: TextStyle(
-                            fontSize: 10,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.orange.shade800,
+                        value: provider.userCrop,
+                        items: [
+                          'wheat', 'rice', 'cotton', 'maize',
+                          'pulses', 'sugarcane', 'groundnut'
+                        ].map((String value) {
+                          return DropdownMenuItem<String>(
+                            value: value,
+                            child: Text(value),
+                          );
+                        }).toList(),
+                        onChanged: (value) {
+                          if (value != null) provider.setUserCrop(value);
+                        },
+                      ),
+                      const SizedBox(height: 8),
+                      const _SuggestionChips(),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: _queryController,
+                        minLines: 1,
+                        maxLines: 5,
+                        decoration: InputDecoration(
+                          hintText: 'Type your message...',
+                          filled: true,
+                          prefixIcon: const Icon(Icons.chat_outlined),
+                          suffixIcon: Row(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              IconButton(
+                                tooltip: _isListening ? 'Stop voice input' : 'Voice input',
+                                icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
+                                onPressed: _isListening ? _stopListening : _startListening,
+                                color: _isListening ? Colors.red : null,
+                              ),
+                              IconButton(
+                                tooltip: 'Send',
+                                icon: const Icon(Icons.send),
+                                onPressed: provider.isLoading ? null : _sendQuery,
+                              ),
+                            ],
                           ),
                         ),
+                        enabled: !provider.isLoading,
+                        textInputAction: TextInputAction.newline,
                       ),
-                    ],
-                  ],
-                ),
-                const SizedBox(height: 12),
-                
-                // Query responses or empty state
-                Container(
-                  height: 200,
-                  child: provider.history.isEmpty
-                      ? const _EmptyState()
-                      : ListView.builder(
+                      if (provider.error.isNotEmpty)
+                        Container(
+                          width: double.infinity,
+                          margin: const EdgeInsets.only(top: 8),
                           padding: const EdgeInsets.all(8),
-                          itemCount: provider.history.length > 3 ? 3 : provider.history.length,
-                          itemBuilder: (context, index) {
-                            final response = provider.history[index];
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 8),
-                              child: ResponseCard(
-                                response: response,
-                                onSpeak: () => _speakText(response.answer),
-                                isSpeaking: _isSpeaking,
-                              ),
-                            );
-                          },
+                          decoration: BoxDecoration(
+                            color: Colors.red.shade100,
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                          child: Text(
+                            provider.error,
+                            style: TextStyle(color: Colors.red.shade800),
+                          ),
                         ),
-                ),
-                
-                const SizedBox(height: 16),
-                
-                if (provider.isLoading)
-                  const Padding(
-                    padding: EdgeInsets.all(12),
-                    child: CircularProgressIndicator(),
+                    ],
                   ),
-
-                // Query Input Section
-                Column(
-                  children: [
-                    // Crop selection
-                    DropdownButtonFormField<String>(
-                      isDense: true,
-                      decoration: const InputDecoration(
-                        labelText: 'Crop',
-                        prefixIcon: Icon(Icons.agriculture_outlined),
-                      ),
-                      value: provider.userCrop,
-                      items: [
-                        'wheat', 'rice', 'cotton', 'maize', 
-                        'pulses', 'sugarcane', 'groundnut'
-                      ].map((String value) {
-                        return DropdownMenuItem<String>(
-                          value: value,
-                          child: Text(value),
-                        );
-                      }).toList(),
-                      onChanged: (value) {
-                        if (value != null) provider.setUserCrop(value);
-                      },
-                    ),
-                    const SizedBox(height: 8),
-                    const _SuggestionChips(),
-                    const SizedBox(height: 8),
-                    TextField(
-                      controller: _queryController,
-                      decoration: InputDecoration(
-                        hintText: 'Ask your agricultural question...',
-                        suffixIcon: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            IconButton(
-                              tooltip: _isListening ? 'Stop voice input' : 'Voice input',
-                              icon: Icon(_isListening ? Icons.mic : Icons.mic_none),
-                              onPressed: _isListening ? _stopListening : _startListening,
-                              color: _isListening ? Colors.red : null,
-                            ),
-                            IconButton(
-                              tooltip: 'Send',
-                              icon: const Icon(Icons.send),
-                              onPressed: provider.isLoading ? null : _sendQuery,
-                            ),
-                          ],
-                        ),
-                      ),
-                      maxLines: 3,
-                      enabled: !provider.isLoading,
-                      textInputAction: TextInputAction.newline,
-                    ),
-
-                    if (provider.error.isNotEmpty)
-                      Container(
-                        width: double.infinity,
-                        margin: const EdgeInsets.only(top: 8),
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.red.shade100,
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: Text(
-                          provider.error,
-                          style: TextStyle(color: Colors.red.shade800),
-                        ),
-                      ),
-                  ],
                 ),
-                
-                const SizedBox(height: 24),
-
-              ],
-            ),
+              ),
+            ],
           );
         },
       ),

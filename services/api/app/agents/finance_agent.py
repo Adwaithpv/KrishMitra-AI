@@ -197,8 +197,8 @@ class FinanceAgent:
         
         return extracted_data
     
-    def _generate_intelligent_financial_strategy(self, query: str, location: str, crop: str, extracted_data: Dict[str, Any]) -> str:
-        """Use Gemini LLM to generate intelligent financial advice and strategies"""
+    def _generate_intelligent_financial_strategy(self, query: str, location: str, crop: str, extracted_data: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> str:
+        """Use Gemini LLM to generate intelligent financial advice and strategies, with conversation context"""
         
         # Prepare comprehensive context for Gemini
         context_prompt = f"""
@@ -212,6 +212,23 @@ FARM PROFILE:
 FINANCIAL PARAMETERS DETECTED:
 """
         
+        # Add conversation context if available
+        if context and isinstance(context, dict):
+            summary = context.get("conversation_summary")
+            last_q = context.get("last_agent_prompt")
+            last_a = context.get("last_user_answer")
+            pending = context.get("pending_questions") or []
+            if summary or last_q or last_a or pending:
+                context_prompt += "\nCONVERSATION CONTEXT:\n"
+                if summary:
+                    context_prompt += f"- Summary: {summary}\n"
+                if last_q:
+                    context_prompt += f"- Last agent prompt: {last_q}\n"
+                if last_a:
+                    context_prompt += f"- Last user reply: {last_a}\n"
+                if pending:
+                    context_prompt += f"- Pending questions: {', '.join(pending[:3])}\n"
+
         # Add extracted financial data
         if extracted_data:
             for key, value in extracted_data.items():
@@ -497,8 +514,8 @@ Format as a numbered list of clear, direct questions.
         
         return '\n'.join(questions)
     
-    def process_query(self, query: str, location: str = None, crop: str = None, session_id: str = None) -> Dict[str, Any]:
-        """Process finance-related queries with enhanced capabilities and session-based data collection"""
+    def process_query(self, query: str, location: str = None, crop: str = None, session_id: str = None, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
+        """Process finance-related queries with enhanced capabilities, conversation context, and session-based data collection"""
         
         # Get or create session for this user
         print(f"DEBUG: Starting session management with session_id = {session_id}")
@@ -514,6 +531,13 @@ Format as a numbered list of clear, direct questions.
         
         # Extract financial data from query
         extracted_data = self._extract_financial_data_from_query(query)
+        # Merge last short answer from context for follow-ups
+        if context and isinstance(context, dict):
+            last_ans = context.get("last_user_answer")
+            if last_ans and last_ans != query and len(query.strip().split()) <= 4:
+                prev_data = self._extract_financial_data_from_query(last_ans)
+                for k, v in prev_data.items():
+                    extracted_data.setdefault(k, v)
         
         # Try to update session with new data
         try:
@@ -548,11 +572,21 @@ Format as a numbered list of clear, direct questions.
         print(f"DEBUG: needs_detailed_analysis = {needs_detailed_analysis}")
         print(f"DEBUG: form_completed = {form_completed}")
         print(f"DEBUG: session_id = {session_id}")
+
+        # Market price queries should return pricing even if prior finance data exists
+        if any(word in query_lower for word in ["price", "market", "mandi", "rate", "selling", "sell"]):
+            inferred_crop = crop
+            if not inferred_crop:
+                for c in ["wheat", "rice", "cotton", "maize", "pulses", "sugarcane", "groundnut"]:
+                    if c in query_lower:
+                        inferred_crop = c
+                        break
+            return self._get_enhanced_market_price_advice(query, location, inferred_crop)
         
         # Farm financial optimization queries with potential follow-ups
         if needs_detailed_analysis:
             # For optimization queries, ALWAYS provide immediate advice first
-            immediate_advice = self._get_general_optimization_advice(query, location, crop, session_id)
+            immediate_advice = self._get_general_optimization_advice(query, location, crop, session_id, context=context)
             
             # Only try to add form if we have a working session
             if session_id and form_completed is False:
@@ -570,7 +604,7 @@ Format as a numbered list of clear, direct questions.
         # If user provided financial details (even without keywords), generate personalized optimization
         significant_keys = ['land_size_acres','annual_production','fertilizer_cost','water_cost','labor_cost','seed_cost','machinery_cost','total_annual_spend']
         if any(k in all_financial_data for k in significant_keys):
-            response = self._get_financial_optimization_advice(query, location, crop, all_financial_data)
+            response = self._get_financial_optimization_advice(query, location, crop, all_financial_data, context=context)
             if isinstance(response, dict):
                 response["session_id"] = session_id
             return response
@@ -584,7 +618,7 @@ Format as a numbered list of clear, direct questions.
             if not form_completed and len(all_financial_data) < 3:
                 return finance_session_manager.generate_finance_form(session_id, query)
             else:
-                response = self._get_farm_economics_advice(query, location, crop, all_financial_data)
+                response = self._get_farm_economics_advice(query, location, crop, all_financial_data, context=context)
                 if isinstance(response, dict):
                     response["session_id"] = session_id
                 return response
@@ -672,7 +706,7 @@ Format as a numbered list of clear, direct questions.
             "confidence": 0.9
         }
     
-    def _get_financial_optimization_advice(self, query: str, location: str, crop: str, extracted_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _get_financial_optimization_advice(self, query: str, location: str, crop: str, extracted_data: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Provide personalized financial optimization advice using AI-powered analysis"""
         
         # Generate intelligent strategy using Gemini LLM
@@ -682,7 +716,7 @@ Format as a numbered list of clear, direct questions.
         param_section = self._analyze_provided_parameters(extracted_data)
         
         # Generate intelligent financial strategy using Gemini
-        ai_strategy_section = self._generate_intelligent_financial_strategy(query, location, crop, extracted_data)
+        ai_strategy_section = self._generate_intelligent_financial_strategy(query, location, crop, extracted_data, context=context)
         
         # Add practical implementation section
         implementation_section = "\n\n### 📋 Implementation Checklist\n"
@@ -927,7 +961,7 @@ Format as a numbered list of clear, direct questions.
         
         return section
     
-    def _get_farm_economics_advice(self, query: str, location: str, crop: str, extracted_data: Dict[str, Any]) -> Dict[str, Any]:
+    def _get_farm_economics_advice(self, query: str, location: str, crop: str, extracted_data: Dict[str, Any], context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Provide AI-powered farm economics analysis"""
         
         # Create comprehensive prompt for farm economics analysis
@@ -942,6 +976,9 @@ FARM PROFILE:
 FINANCIAL DATA:
 """
         
+        if context and context.get("conversation_summary"):
+            economics_prompt += f"\nCONTEXT SUMMARY:\n{context.get('conversation_summary')}\n"
+
         if extracted_data:
             for key, value in extracted_data.items():
                 readable_key = key.replace('_', ' ').title()
@@ -1049,7 +1086,7 @@ Format with clear sections and bullet points for easy reading.
     
 
     
-    def _get_general_optimization_advice(self, query: str, location: str, crop: str, session_id: str) -> Dict[str, Any]:
+    def _get_general_optimization_advice(self, query: str, location: str, crop: str, session_id: str, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Provide general financial optimization advice when detailed data isn't available"""
         print(f"DEBUG: _get_general_optimization_advice called with session_id = {session_id}")
         
@@ -1124,10 +1161,13 @@ With systematic implementation, you can expect:
 
 💡 **For personalized recommendations, please provide your farm size, current crops, and approximate annual spending on inputs. This will help create a specific optimization plan for your farm.**"""
 
+        advice_text = optimization_advice
+        if context and context.get("conversation_summary"):
+            advice_text = f"### Context\n{context.get('conversation_summary')}\n\n" + advice_text
         return {
             "agent": "finance_agent",
             "result": {
-                "advice": optimization_advice,
+                "advice": advice_text,
                 "urgency": "medium"
             },
             "evidence": [],

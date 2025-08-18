@@ -24,6 +24,9 @@ class ConversationContext:
         self.pending_questions = []  # Questions agent is waiting for answers to
         self.expecting_response = False  # Whether agent is waiting for user response
         self.context_understanding = {}  # Context from previous interactions
+        self.context_summary = ""  # Rolling compact summary (<= ~600 tokens)
+        self.last_agent_prompt = ""  # Last question(s) asked by agent
+        self.last_user_answer = ""   # Last user reply
         
     def add_interaction(self, query: str, agent_used: str, response: Dict[str, Any], is_followup_question: bool = False):
         """Add a new interaction to conversation history"""
@@ -37,6 +40,9 @@ class ConversationContext:
         }
         
         self.conversation_history.append(interaction)
+        # Keep only last 10 turns
+        if len(self.conversation_history) > 10:
+            self.conversation_history = self.conversation_history[-10:]
         self.last_updated = datetime.now()
         
         # Update active agent and state
@@ -57,6 +63,15 @@ class ConversationContext:
         
         # Update user profile with extracted information
         self._update_user_profile(query, response)
+
+        # Update last Q/A pointers
+        self.last_user_answer = query
+        if self.pending_questions:
+            # last_agent_prompt set to combined pending questions
+            self.last_agent_prompt = "; ".join(self.pending_questions[:3])
+
+        # Update rolling summary
+        self._update_summary()
     
     def is_response_to_agent(self, query: str) -> Tuple[bool, Optional[str]]:
         """Determine if query is a response to pending agent questions"""
@@ -284,31 +299,55 @@ class ConversationContext:
     
     def get_context_summary(self) -> str:
         """Get a summary of conversation context"""
+        if self.context_summary:
+            return self.context_summary
+        # Fallback quick summary
         if not self.conversation_history:
             return "No previous conversation"
-        
-        summary_parts = []
-        
-        # Recent interactions
-        recent = self.conversation_history[-3:]  # Last 3 interactions
-        summary_parts.append(f"Recent interactions: {len(recent)} exchanges")
-        
-        # Active agent and state
+        recent = self.conversation_history[-3:]
+        parts = [f"Recent exchanges: {len(recent)}"]
         if self.active_agent and self.expecting_response:
-            summary_parts.append(f"Active conversation with {self.active_agent}")
+            parts.append(f"Active: {self.active_agent}")
+        return " | ".join(parts)
+
+    def _update_summary(self):
+        """Update the rolling compact summary (non-LLM heuristic)."""
+        try:
+            # Build from last 5 turns
+            recent = self.conversation_history[-5:]
+            lines = []
+            for turn in recent:
+                q = turn.get("query", "")
+                a = turn.get("response", {}).get("result", {}).get("advice") or turn.get("response", {}).get("answer", "")
+                if q:
+                    lines.append(f"U: {q[:120]}")
+                if a:
+                    lines.append(f"A: {a[:160]}")
+            meta = []
+            if self.active_agent:
+                meta.append(f"active={self.active_agent}")
             if self.pending_questions:
-                summary_parts.append(f"Waiting for answers to {len(self.pending_questions)} questions")
-        
-        # User profile highlights
-        if self.user_profile:
-            profile_summary = []
-            for key, values in self.user_profile.items():
-                if values:
-                    profile_summary.append(f"{key}: {values[-1]}")  # Latest value
-            if profile_summary:
-                summary_parts.append(f"Known: {', '.join(profile_summary)}")
-        
-        return " | ".join(summary_parts)
+                meta.append(f"pendingQ={len(self.pending_questions)}")
+            if self.user_profile:
+                # include last seen crop/land if present
+                crop = None
+                if 'crops' in self.user_profile and self.user_profile['crops']:
+                    crop = self.user_profile['crops'][-1]
+                land = None
+                if 'land_size' in self.user_profile and self.user_profile['land_size']:
+                    land = self.user_profile['land_size'][-1]
+                if crop:
+                    meta.append(f"crop={crop}")
+                if land:
+                    meta.append(f"land={land}")
+            header = f"[{', '.join(meta)}]" if meta else ""
+            text = (header + "\n" + "\n".join(lines)).strip()
+            # Trim to ~800 chars
+            if len(text) > 800:
+                text = text[-800:]
+            self.context_summary = text
+        except Exception:
+            pass
 
 
 class ConversationContextManager:
@@ -317,6 +356,12 @@ class ConversationContextManager:
     def __init__(self):
         self.sessions = {}
         self.session_timeout = timedelta(hours=4)  # Longer timeout for conversations
+        # Optional Redis backing
+        try:
+            from .redis_client import get_redis  # lazy import
+            self._redis = get_redis()
+        except Exception:
+            self._redis = None
     
     def get_or_create_context(self, session_id: str = None) -> ConversationContext:
         """Get existing context or create new one"""
@@ -327,7 +372,27 @@ class ConversationContextManager:
         self._cleanup_expired_sessions()
         
         if session_id not in self.sessions:
-            self.sessions[session_id] = ConversationContext(session_id)
+            # Try loading from Redis first
+            if self._redis:
+                raw = self._redis.get(f"context:{session_id}")
+                if raw:
+                    try:
+                        data = json.loads(raw)
+                        ctx = ConversationContext(session_id)
+                        # restore minimal fields
+                        ctx.conversation_history = data.get("conversation_history", [])
+                        ctx.active_agent = data.get("active_agent")
+                        ctx.agent_state = data.get("agent_state", {})
+                        ctx.user_profile = data.get("user_profile", {})
+                        ctx.pending_questions = data.get("pending_questions", [])
+                        ctx.expecting_response = data.get("expecting_response", False)
+                        self.sessions[session_id] = ctx
+                    except Exception:
+                        self.sessions[session_id] = ConversationContext(session_id)
+                else:
+                    self.sessions[session_id] = ConversationContext(session_id)
+            else:
+                self.sessions[session_id] = ConversationContext(session_id)
         
         return self.sessions[session_id]
     
@@ -337,6 +402,22 @@ class ConversationContextManager:
         if session_id in self.sessions:
             context = self.sessions[session_id]
             context.add_interaction(query, agent_used, response, is_followup_question)
+            # Persist to Redis with TTL if available
+            if self._redis:
+                payload = {
+                    "conversation_history": context.conversation_history[-10:],
+                    "active_agent": context.active_agent,
+                    "agent_state": context.agent_state,
+                    "user_profile": context.user_profile,
+                    "pending_questions": context.pending_questions,
+                    "expecting_response": context.expecting_response,
+                }
+                try:
+                    self._redis.setex(
+                        f"context:{session_id}", int(self.session_timeout.total_seconds()), json.dumps(payload)
+                    )
+                except Exception:
+                    pass
     
     def should_route_to_active_agent(self, session_id: str, query: str) -> Tuple[bool, Optional[str]]:
         """Check if query should go to currently active agent"""
@@ -358,6 +439,9 @@ class ConversationContextManager:
             "expecting_response": context.expecting_response,
             "user_profile": context.user_profile,
             "conversation_summary": context.get_context_summary(),
+            "pending_questions": context.pending_questions,
+            "last_agent_prompt": context.last_agent_prompt,
+            "last_user_answer": context.last_user_answer,
             "last_interaction": context.conversation_history[-1] if context.conversation_history else None
         }
     
