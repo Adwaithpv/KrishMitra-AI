@@ -9,6 +9,7 @@ import json
 import os
 import re
 from ..llm_client import LLMClient
+from ..finance_session import finance_session_manager
 
 
 class FinanceAgent:
@@ -150,6 +151,34 @@ class FinanceAgent:
                     extracted_data[cost_type] = float(match.group(1))
                     break
         
+        # Detect total annual spend in Indian formats (e.g., 10 lakhs, 1.5 crore, 200k per year)
+        total_spend_patterns = [
+            r'(?:spend|spending|expense[s]?|cost|expenditure)\s*(?:around|about|nearly)?\s*(?:of\s*)?(\d+(?:\.\d+)?)\s*(lakhs?|lacs?|crores?|cr|crore|k|thousand)\b.*?(?:per\s*(?:year|annum)|annually)?',
+            r'(?:spend|spending|expense[s]?|cost|expenditure)\s*(?:around|about|nearly)?\s*(?:of\s*)?(?:rs\.?\s*|₹\s*)?(\d+(?:\.\d+)?)(?!\s*(?:acres?|hectares?))\b.*?(?:per\s*(?:year|annum)|annually)'
+        ]
+        unit_multipliers = {
+            "lakh": 100000,
+            "lakhs": 100000,
+            "lac": 100000,
+            "lacs": 100000,
+            "crore": 10000000,
+            "crores": 10000000,
+            "cr": 10000000,
+            "k": 1000,
+            "thousand": 1000,
+        }
+        for pattern in total_spend_patterns:
+            m = re.search(pattern, query.lower())
+            if m:
+                amount = float(m.group(1))
+                unit_match = re.search(r'(lakhs?|lacs?|crores?|cr|crore|k|thousand)', query.lower())
+                if unit_match:
+                    unit = unit_match.group(1)
+                    mult = unit_multipliers.get(unit, 1)
+                    amount = amount * mult
+                extracted_data['total_annual_spend'] = float(amount)
+                break
+        
         # Extract production/yield
         yield_patterns = [
             r'yield\s+(?:of\s+)?(\d+(?:\.\d+)?)',
@@ -193,6 +222,8 @@ FINANCIAL PARAMETERS DETECTED:
                     context_prompt += f"- {readable_key}: {value} acres\n"
                 elif key == 'annual_production':
                     context_prompt += f"- {readable_key}: {value} quintals\n"
+                elif key == 'total_annual_spend':
+                    context_prompt += f"- Total Annual Spend: ₹{value:,.0f}\n"
                 else:
                     context_prompt += f"- {readable_key}: {value}\n"
         else:
@@ -300,6 +331,7 @@ Ensure all advice is practical and implementable for the given farm profile.
     
     def _needs_follow_up_questions(self, extracted_data: Dict[str, Any], query: str) -> bool:
         """Determine if we need follow-up questions for better analysis"""
+        print(f"DEBUG: _needs_follow_up_questions called with extracted_data = {extracted_data}")
         
         # Define critical parameters for comprehensive analysis
         critical_params = ['land_size_acres', 'annual_production']
@@ -465,12 +497,46 @@ Format as a numbered list of clear, direct questions.
         
         return '\n'.join(questions)
     
-    def process_query(self, query: str, location: str = None, crop: str = None) -> Dict[str, Any]:
-        """Process finance-related queries with enhanced capabilities and interactive follow-ups"""
+    def process_query(self, query: str, location: str = None, crop: str = None, session_id: str = None) -> Dict[str, Any]:
+        """Process finance-related queries with enhanced capabilities and session-based data collection"""
+        
+        # Get or create session for this user
+        print(f"DEBUG: Starting session management with session_id = {session_id}")
+        if not session_id:
+            session_id = finance_session_manager.get_or_create_session()
+            print(f"DEBUG: Created new session_id = {session_id}")
+        else:
+            # Ensure session exists, create if it doesn't
+            session_id = finance_session_manager.get_or_create_session(session_id)
+            print(f"DEBUG: Ensured session exists: {session_id}")
+        
         query_lower = query.lower()
         
         # Extract financial data from query
         extracted_data = self._extract_financial_data_from_query(query)
+        
+        # Try to update session with new data
+        try:
+            update_success = finance_session_manager.update_session_data(session_id, query, extracted_data)
+        except Exception as e:
+            print(f"Warning: Session update failed: {e}")
+            update_success = False
+        
+        # Get accumulated session data
+        try:
+            session = finance_session_manager.get_session_data(session_id)
+            if session:
+                all_financial_data = session["financial_data"]
+                form_completed = session["form_completed"]
+            else:
+                # Fallback if session doesn't work
+                all_financial_data = extracted_data
+                form_completed = False
+        except Exception as e:
+            print(f"Warning: Session retrieval failed: {e}")
+            # Complete fallback
+            all_financial_data = extracted_data
+            form_completed = False
         
         # Check if this is a query that would benefit from follow-up questions
         needs_detailed_analysis = any(word in query_lower for word in [
@@ -479,13 +545,35 @@ Format as a numbered list of clear, direct questions.
             "better returns", "maximize", "minimize costs", "grow business", "expansion"
         ])
         
+        print(f"DEBUG: needs_detailed_analysis = {needs_detailed_analysis}")
+        print(f"DEBUG: form_completed = {form_completed}")
+        print(f"DEBUG: session_id = {session_id}")
+        
         # Farm financial optimization queries with potential follow-ups
         if needs_detailed_analysis:
-            # Check if we have sufficient data or need follow-up questions
-            if self._needs_follow_up_questions(extracted_data, query):
-                return self._generate_follow_up_questions(query, location, crop, extracted_data)
-            else:
-                return self._get_financial_optimization_advice(query, location, crop, extracted_data)
+            # For optimization queries, ALWAYS provide immediate advice first
+            immediate_advice = self._get_general_optimization_advice(query, location, crop, session_id)
+            
+            # Only try to add form if we have a working session
+            if session_id and form_completed is False:
+                try:
+                    form_response = finance_session_manager.generate_finance_form(session_id, query)
+                    if isinstance(form_response, dict) and "form_data" in form_response.get("result", {}):
+                        immediate_advice["result"]["form_data"] = form_response["result"]["form_data"]
+                        immediate_advice["result"]["advice"] += "\n\n---\n\n**💡 For personalized recommendations, please provide your farm details above.**"
+                except Exception as e:
+                    print(f"Warning: Form generation failed: {e}")
+                    # Still return the optimization advice even if form fails
+            
+            return immediate_advice
+        
+        # If user provided financial details (even without keywords), generate personalized optimization
+        significant_keys = ['land_size_acres','annual_production','fertilizer_cost','water_cost','labor_cost','seed_cost','machinery_cost','total_annual_spend']
+        if any(k in all_financial_data for k in significant_keys):
+            response = self._get_financial_optimization_advice(query, location, crop, all_financial_data)
+            if isinstance(response, dict):
+                response["session_id"] = session_id
+            return response
         
         # Enhanced market price queries
         elif any(word in query_lower for word in ["price", "market", "mandi", "rate", "selling", "sell"]):
@@ -493,7 +581,13 @@ Format as a numbered list of clear, direct questions.
         
         # Farm economics analysis
         elif any(word in query_lower for word in ["income", "revenue", "profit", "economics", "budget", "financial analysis"]):
-            return self._get_farm_economics_advice(query, location, crop, extracted_data)
+            if not form_completed and len(all_financial_data) < 3:
+                return finance_session_manager.generate_finance_form(session_id, query)
+            else:
+                response = self._get_farm_economics_advice(query, location, crop, all_financial_data)
+                if isinstance(response, dict):
+                    response["session_id"] = session_id
+                return response
         
         # Credit and financing queries
         elif any(word in query_lower for word in ["credit", "loan", "bank", "finance", "money", "investment", "capital", "funding"]):
@@ -709,6 +803,9 @@ Format as a numbered list of clear, direct questions.
         if 'land_size_acres' in extracted_data:
             section += f"**🏞️ Farm Size:** {extracted_data['land_size_acres']} acres\n"
         
+        if 'total_annual_spend' in extracted_data:
+            section += f"**💰 Total Annual Spend:** ₹{extracted_data['total_annual_spend']:,.0f}\n"
+        
         for cost_type, value in extracted_data.items():
             if 'cost' in cost_type:
                 section += f"**💰 {cost_type.replace('_', ' ').title()}:** ₹{value:,.0f} annually\n"
@@ -798,6 +895,8 @@ Format as a numbered list of clear, direct questions.
         
         # Calculate potential savings
         total_costs = sum(value for key, value in extracted_data.items() if 'cost' in key)
+        if total_costs == 0 and 'total_annual_spend' in extracted_data:
+            total_costs = extracted_data['total_annual_spend']
         if total_costs > 0:
             section += f"**Current Annual Costs:** ₹{total_costs:,.0f}\n"
             section += f"**Potential Savings (15-25%):** ₹{total_costs * 0.2:,.0f} annually\n"
@@ -949,6 +1048,92 @@ Format with clear sections and bullet points for easy reading.
         }
     
 
+    
+    def _get_general_optimization_advice(self, query: str, location: str, crop: str, session_id: str) -> Dict[str, Any]:
+        """Provide general financial optimization advice when detailed data isn't available"""
+        print(f"DEBUG: _get_general_optimization_advice called with session_id = {session_id}")
+        
+        optimization_advice = f"""## 💰 Farm Financial Optimization Strategy
+
+**Based on your request for optimizing spendings and improving profits, here's actionable guidance:**
+
+### 🎯 **Immediate Cost Optimization Steps**
+
+**1. Input Cost Analysis & Reduction:**
+• **Fertilizer Optimization**: Conduct soil testing to apply exact NPK requirements (can save 15-25%)
+• **Water Management**: Implement drip irrigation or precision watering (save 30-50% water costs)
+• **Bulk Purchasing**: Join farmer groups for bulk buying of seeds, fertilizers (save 10-15%)
+• **Seasonal Planning**: Buy inputs during off-season when prices are lower
+
+**2. Revenue Enhancement Strategies:**
+• **Quality Improvement**: Focus on produce quality to get premium prices (10-20% higher)
+• **Direct Marketing**: Sell directly to consumers/retailers, bypass middlemen (increase margins by 20-30%)
+• **Value Addition**: Basic processing, grading, packaging can increase profits by 25-40%
+• **Market Timing**: Store produce when possible to sell during price peaks
+
+### 📊 **Profitability Improvement Framework**
+
+**Cost Structure Optimization:**
+- Reduce input costs by 15-20% through efficient usage
+- Minimize post-harvest losses (currently avg 20-25% in India)
+- Optimize labor costs through mechanization where feasible
+
+**Revenue Maximization:**
+- Diversify crops to spread risk and capture different market windows
+- Explore contract farming for price certainty
+- Implement intercropping for additional income streams
+
+### 💡 **Financial Management Best Practices**
+
+**Record Keeping & Analysis:**
+• Maintain detailed records of all inputs and outputs
+• Calculate per-acre profitability for each crop
+• Track ROI on different farming practices
+• Monitor cash flow patterns
+
+**Investment Prioritization:**
+• Focus on investments with highest ROI first
+• Consider rental/sharing of expensive equipment
+• Invest in soil health for long-term productivity gains
+
+### 🚀 **Next Steps for Optimization**
+
+1. **Immediate (This Month):**
+   - Start maintaining detailed financial records
+   - Get soil testing done for precise fertilizer application
+   - Research local market prices and timing
+
+2. **Short-term (3-6 months):**
+   - Implement one major cost-saving measure (irrigation/fertilizer optimization)
+   - Explore direct marketing opportunities
+   - Join or form farmer producer groups
+
+3. **Long-term (1+ years):**
+   - Consider crop diversification based on market analysis
+   - Invest in value addition capabilities
+   - Build financial reserves for price volatility
+
+### 📈 **Expected Impact**
+With systematic implementation, you can expect:
+- **15-25% reduction in input costs**
+- **20-35% increase in net profits**
+- **Better cash flow management**
+- **Reduced financial risks**
+
+---
+
+💡 **For personalized recommendations, please provide your farm size, current crops, and approximate annual spending on inputs. This will help create a specific optimization plan for your farm.**"""
+
+        return {
+            "agent": "finance_agent",
+            "result": {
+                "advice": optimization_advice,
+                "urgency": "medium"
+            },
+            "evidence": [],
+            "confidence": 0.8,
+            "session_id": session_id
+        }
     
     def _get_general_finance_advice(self, location: str, crop: str) -> Dict[str, Any]:
         """Provide AI-powered general financial advice"""

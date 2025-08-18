@@ -9,7 +9,9 @@ from langgraph.checkpoint.memory import MemorySaver
 import json
 import asyncio
 import logging
+import re
 from datetime import datetime
+from .conversation_context import conversation_manager
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -124,47 +126,15 @@ class SupervisorAgent:
         return compiled_workflow
     
     def _analyze_query(self, state: AgentState) -> AgentState:
-        """Analyze the user query to understand intent and context"""
+        """Analyze the user query using pure LLM intelligence"""
         logger.info(f"🔍 ANALYZING QUERY: '{state['query']}' | Location: {state.get('location', 'N/A')} | Crop: {state.get('crop', 'N/A')}")
         try:
             query = state["query"]
             location = state.get("location", "")
             crop = state.get("crop", "")
             
-            # Use LLM to analyze query intent
-            analysis_prompt = f"""
-            Analyze this agricultural query and determine the best approach:
-            
-            Query: {query}
-            Location: {location}
-            Crop: {crop}
-            
-            Determine:
-            1. Primary intent (weather, crop_management, finance, policy, or general)
-            2. Urgency level (low, medium, high)
-            3. Required agents (weather, crop, finance, policy)
-            4. Whether this needs real-time data or can use static knowledge
-            5. Any specific constraints or preferences
-            
-            Respond in JSON format:
-            {{
-                "intent": "weather|crop_management|finance|policy|general",
-                "urgency": "low|medium|high", 
-                "required_agents": ["weather", "crop", "finance", "policy"],
-                "needs_realtime": true/false,
-                "constraints": "any specific constraints",
-                "confidence": 0.0-1.0
-            }}
-            """
-            
-            # Get LLM analysis using text generation
-            analysis_response = self.llm_client.generate_text(analysis_prompt)
-            
-            try:
-                analysis = json.loads(analysis_response)
-            except json.JSONDecodeError:
-                # Fallback analysis
-                analysis = self._fallback_query_analysis(query, location, crop)
+            # Use pure LLM analysis - no keywords, only intelligence
+            analysis = self._llm_query_analysis(query, location, crop)
             
             # Update state with analysis
             state["user_context"] = {
@@ -173,7 +143,9 @@ class SupervisorAgent:
                 "required_agents": analysis.get("required_agents", []),
                 "needs_realtime": analysis.get("needs_realtime", False),
                 "constraints": analysis.get("constraints", ""),
-                "confidence": analysis.get("confidence", 0.7)
+                "confidence": analysis.get("confidence", 0.7),
+                "reasoning": analysis.get("reasoning", ""),
+                "primary_goal": analysis.get("primary_goal", "")
             }
             
             state["workflow_step"] = "query_analyzed"
@@ -186,59 +158,77 @@ class SupervisorAgent:
         
         return state
     
-    def _fallback_query_analysis(self, query: str, location: str, crop: str) -> Dict[str, Any]:
-        """Fallback analysis when LLM is not available"""
-        query_lower = query.lower()
+    def _llm_query_analysis(self, query: str, location: str, crop: str, context_info: Dict[str, Any] = None) -> Dict[str, Any]:
+        """Pure LLM-based query analysis - no keywords, only intelligent understanding"""
         
-        # Simple keyword-based analysis
-        intent = "general"
-        required_agents = []
+        # Prepare context section
+        context_section = ""
+        if context_info:
+            context_section = f"""
+CONVERSATION CONTEXT:
+- Session: {context_info.get('session_id', 'new')}
+- Previous Agent: {context_info.get('active_agent', 'none')}
+- User Profile: {context_info.get('user_profile', {})}
+- Summary: {context_info.get('conversation_summary', 'No previous context')}
+"""
         
-        # Weather-related
-        weather_keywords = ["weather", "rain", "rainfall", "drought", "temperature", "heat", "cold", "storm", "forecast", "alert", "irrigation", "water"]
-        if any(keyword in query_lower for keyword in weather_keywords):
-            intent = "weather"
-            required_agents.append("weather")
-        
-        # Crop-related
-        crop_keywords = ["fertilizer", "npk", "pest", "disease", "plant", "sow", "transplant", "spacing", "growth"]
-        if any(keyword in query_lower for keyword in crop_keywords):
-            intent = "crop_management"
-            required_agents.append("crop")
-        
-        # Finance-related
-        finance_keywords = ["price", "market", "mandi", "rate", "cost", "loan", "credit", "bank", "finance", "money", "investment", "profit"]
-        if any(keyword in query_lower for keyword in finance_keywords):
-            intent = "finance"
-            required_agents.append("finance")
-        
-        # Policy-related (includes subsidies which are government schemes)
-        policy_keywords = [
-            "scheme", "schemes", "policy", "policies", "government", "benefit", "benefits",
-            "subsidy", "subsidies", "allowance", "grant", "grants",
-            "pm kisan", "pm-kisan", "pmkisan", "pradhan mantri", "pradhanmantri", 
-            "pm kissan", "pm-kissan", "centrail pm", "central pm",
-            "nabard", "eligible", "eligibility", "apply", "application", "registration",
-            "form", "document", "documents", "how to get", "how to apply",
-            "kisan credit", "crop insurance", "fasal bima", "soil health", 
-            "pension", "msp", "minimum support", "enroll", "enrollment", "register"
-        ]
-        if any(keyword in query_lower for keyword in policy_keywords):
-            intent = "policy"
-            required_agents.append("policy")
-        
-        # Default to weather and crop if no specific intent
-        if not required_agents:
-            required_agents = ["weather", "crop"]
-        
-        return {
-            "intent": intent,
-            "urgency": "medium",
-            "required_agents": required_agents,
-            "needs_realtime": "weather" in required_agents,
-            "constraints": "",
-            "confidence": 0.6
-        }
+        analysis_prompt = f"""You are an expert agricultural advisor analyst. Analyze this farmer's query and determine the intent, urgency, and which specialized agents should handle it.
+
+QUERY: "{query}"
+LOCATION: {location or "Not specified"}
+CROP: {crop or "Not specified"}
+{context_section}
+
+AVAILABLE AGENTS:
+1. WEATHER AGENT - Weather forecasts, climate conditions, rainfall, drought, temperature, irrigation timing, seasonal planning
+2. CROP AGENT - Crop selection, varieties, planting, cultivation, fertilizers, pest control, diseases, farming techniques, soil management
+3. FINANCE AGENT - Market prices, costs, profits, loans, banking, investments, ROI calculations, financial optimization, farm economics, spending analysis
+4. POLICY AGENT - Government schemes, subsidies, eligibility, applications, PM-Kisan, insurance, policies, regulatory compliance
+
+ANALYSIS INSTRUCTIONS:
+- Understand the INTENT behind the query, not just keywords
+- Consider the farmer's actual need and desired outcome
+- Determine urgency level: low, medium, high, urgent
+- Select 1-2 most relevant agents (usually just 1)
+- Focus on what the farmer really wants to achieve
+
+RESPOND WITH EXACTLY THIS JSON FORMAT:
+{{
+    "intent": "financial_optimization",
+    "urgency": "medium", 
+    "required_agents": ["finance"],
+    "needs_realtime": false,
+    "constraints": "Requires farm financial data",
+    "confidence": 0.9,
+    "reasoning": "Farmer is seeking financial advice to optimize farm costs and improve profitability",
+    "primary_goal": "Cost optimization and financial improvement"
+}}"""
+
+        try:
+            logger.info("🧠 QUERYING LLM FOR INTELLIGENT QUERY ANALYSIS...")
+            llm_response = self.llm_client.generate_text(analysis_prompt)
+            
+            # Clean and parse JSON response
+            cleaned_json = self._clean_json_response(llm_response)
+            analysis_result = json.loads(cleaned_json)
+            
+            logger.info(f"🧠 LLM ANALYSIS: Intent='{analysis_result.get('intent')}' | Agents={analysis_result.get('required_agents')} | Confidence={analysis_result.get('confidence')}")
+            
+            return analysis_result
+            
+        except Exception as e:
+            logger.error(f"❌ LLM QUERY ANALYSIS FAILED: {str(e)}")
+            # Emergency fallback - route to crop agent with low confidence
+            return {
+                "intent": "general_agricultural",
+                "urgency": "medium",
+                "required_agents": ["crop"],
+                "needs_realtime": False,
+                "constraints": "LLM analysis unavailable",
+                "confidence": 0.3,
+                "reasoning": "Fallback routing due to LLM unavailability",
+                "primary_goal": "General agricultural assistance"
+            }
     
     def _should_route_to_agents(self, state: AgentState) -> Literal["route", "direct_answer", "error"]:
         """Determine if we should route to agents or provide direct answer"""
@@ -621,7 +611,341 @@ class SupervisorAgent:
         
         return state
     
-    async def process_query_async(self, query: str, location: str = None, crop: str = None) -> Dict[str, Any]:
+    def _clean_json_response(self, response: str) -> str:
+        """Clean and extract JSON from LLM response"""
+        # Remove common prefixes/suffixes that LLMs add
+        response = response.strip()
+        
+        # Remove markdown code blocks
+        if response.startswith('```json'):
+            response = response[7:]
+        if response.startswith('```'):
+            response = response[3:]
+        if response.endswith('```'):
+            response = response[:-3]
+        
+        # Find JSON boundaries
+        json_start = response.find('{')
+        json_end = response.rfind('}') + 1
+        
+        if json_start != -1 and json_end > json_start:
+            return response[json_start:json_end].strip()
+        
+        return response.strip()
+    
+    def _llm_based_agent_selection(self, query: str, location: str = None, crop: str = None) -> tuple[str, Dict[str, Any]]:
+        """Use LLM to intelligently select and execute the best agent"""
+        try:
+            # Create a comprehensive prompt for agent selection
+            agent_selection_prompt = f"""You are an intelligent agricultural advisor router. Analyze this query and determine which specialized agent should handle it.
+
+QUERY: "{query}"
+LOCATION: {location or "Not specified"}
+CROP: {crop or "Not specified"}
+
+AVAILABLE AGENTS:
+1. WEATHER AGENT - Handles weather forecasts, climate conditions, rainfall, drought, temperature, irrigation timing based on weather
+2. CROP AGENT - Handles crop selection, varieties, planting, cultivation, fertilizers, pest control, diseases, farming techniques
+3. FINANCE AGENT - Handles market prices, costs, profits, loans, banking, investments, ROI calculations
+4. POLICY AGENT - Handles government schemes, subsidies, eligibility, applications, PM-Kisan, insurance, policies
+
+INSTRUCTIONS:
+- Analyze the query and select the MOST appropriate agent
+- Choose only ONE agent: weather, crop, finance, or policy
+- Respond with ONLY valid JSON, no additional text
+
+RESPOND WITH EXACTLY THIS JSON FORMAT:
+{{
+    "selected_agent": "crop",
+    "reasoning": "Query is about crop selection which requires agricultural expertise",
+    "confidence": 0.9,
+    "query_type": "crop_selection",
+    "priority_info": "Regional crop varieties and suitability"
+}}"""
+            
+            logger.info("🤖 QUERYING LLM FOR AGENT SELECTION...")
+            llm_response = self.llm_client.generate_text(agent_selection_prompt)
+            
+            logger.info(f"🔍 RAW LLM RESPONSE: {llm_response[:200]}...")  # Log first 200 chars for debugging
+            
+            try:
+                # Clean the JSON response
+                cleaned_json = self._clean_json_response(llm_response)
+                logger.info(f"🔍 CLEANED JSON: {cleaned_json}")
+                
+                selection_result = json.loads(cleaned_json)
+                
+                selected_agent = selection_result.get("selected_agent", "crop")
+                reasoning = selection_result.get("reasoning", "LLM selection")
+                confidence = selection_result.get("confidence", 0.8)
+                
+                logger.info(f"🤖 LLM SELECTION: {selected_agent} | Reasoning: {reasoning} | Confidence: {confidence}")
+                
+                # Execute the selected agent
+                if selected_agent == "weather":
+                    response = self.agents["weather"].process_query(query, location, crop)
+                    agent_name = "weather_agent"
+                elif selected_agent == "finance":
+                    response = self.agents["finance"].process_query(query, location, crop)
+                    agent_name = "finance_agent"
+                elif selected_agent == "policy":
+                    response = self.agents["policy"].process_query(query, location, crop)
+                    agent_name = "policy_agent"
+                else:  # Default to crop agent
+                    response = self.agents["crop"].process_query(query, location, crop)
+                    agent_name = "crop_agent"
+                
+                # Add LLM routing metadata to response
+                if isinstance(response, dict):
+                    response["llm_routing"] = {
+                        "reasoning": reasoning,
+                        "confidence": confidence,
+                        "query_type": selection_result.get("query_type", "agricultural")
+                    }
+                
+                return agent_name, response
+                
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.warning(f"⚠️ LLM response JSON parsing failed: {str(e)}")
+                logger.warning(f"⚠️ Raw response: {llm_response}")
+                return None, None
+                
+        except Exception as e:
+            logger.error(f"❌ LLM AGENT SELECTION FAILED: {str(e)}")
+            return None, None
+    
+    def _pure_llm_agent_selection(self, query: str, location: str = None, crop: str = None, session_id: str = None) -> tuple[str, Dict[str, Any]]:
+        """Pure LLM-based agent selection - no keywords, only intelligent understanding"""
+        logger.info("🧠 USING PURE LLM AGENT SELECTION")
+        
+        # Get conversation context for better routing
+        context_info = conversation_manager.get_context_for_routing(session_id) if session_id else {}
+        
+        # Use LLM to analyze and select the best agent
+        analysis = self._llm_query_analysis(query, location, crop, context_info)
+        required_agents = analysis.get("required_agents", ["crop"])
+        reasoning = analysis.get("reasoning", "LLM intelligent selection")
+        
+        logger.info(f"🧠 LLM REASONING: {reasoning}")
+        
+        # Select the first (most relevant) agent based on LLM analysis
+        selected_agent = required_agents[0] if required_agents else "crop"
+        
+        # Execute the selected agent with session awareness
+        if selected_agent == "weather":
+            response = self.agents["weather"].process_query(query, location, crop)
+            agent_name = "weather_agent"
+        elif selected_agent == "finance":
+            # Pass session_id to finance agent for session management
+            if hasattr(self.agents["finance"], 'process_query'):
+                import inspect
+                sig = inspect.signature(self.agents["finance"].process_query)
+                if 'session_id' in sig.parameters:
+                    response = self.agents["finance"].process_query(query, location, crop, session_id)
+                else:
+                    response = self.agents["finance"].process_query(query, location, crop)
+            else:
+                response = self.agents["finance"].process_query(query, location, crop)
+            agent_name = "finance_agent"
+        elif selected_agent == "policy":
+            response = self.agents["policy"].process_query(query, location, crop)
+            agent_name = "policy_agent"
+        else:  # Default to crop
+            response = self.agents["crop"].process_query(query, location, crop)
+            agent_name = "crop_agent"
+        
+        # Add LLM routing metadata
+        if isinstance(response, dict):
+            response["llm_routing"] = {
+                "reasoning": reasoning,
+                "confidence": analysis.get("confidence", 0.8),
+                "intent": analysis.get("intent", "general"),
+                "primary_goal": analysis.get("primary_goal", "Agricultural assistance"),
+                "session_id": session_id
+            }
+        
+        logger.info(f"🧠 LLM SELECTION: {agent_name} | Reasoning: {reasoning[:50]}...")
+        return agent_name, response
+    
+    def _route_to_active_agent(self, active_agent: str, query: str, location: str = None, crop: str = None, session_id: str = None) -> tuple[str, Dict[str, Any]]:
+        """Route query directly to the active agent in conversation"""
+        logger.info(f"🎯 ROUTING TO ACTIVE AGENT: {active_agent}")
+        
+        try:
+            # Extract base agent name (remove _agent suffix if present)
+            agent_key = active_agent.replace("_agent", "") if active_agent.endswith("_agent") else active_agent
+            
+            if agent_key in self.agents:
+                # For finance agent, pass session_id to maintain session state
+                if agent_key == "finance" and hasattr(self.agents[agent_key], 'process_query'):
+                    # Check if process_query accepts session_id parameter
+                    import inspect
+                    sig = inspect.signature(self.agents[agent_key].process_query)
+                    if 'session_id' in sig.parameters:
+                        response = self.agents[agent_key].process_query(query, location, crop, session_id)
+                    else:
+                        response = self.agents[agent_key].process_query(query, location, crop)
+                else:
+                    response = self.agents[agent_key].process_query(query, location, crop)
+                
+                agent_name = f"{agent_key}_agent"
+                return agent_name, response
+            else:
+                logger.error(f"❌ Unknown agent: {agent_key}")
+                return self._pure_llm_agent_selection(query, location, crop, session_id)
+                
+        except Exception as e:
+            logger.error(f"❌ ACTIVE AGENT ROUTING FAILED: {str(e)}")
+            return self._pure_llm_agent_selection(query, location, crop, session_id)
+    
+    def _response_has_followup_questions(self, response: Dict[str, Any]) -> bool:
+        """Check if agent response contains follow-up questions"""
+        answer = response.get("result", {}).get("advice", "")
+        if not answer:
+            answer = response.get("answer", "")
+        
+        # Look for question indicators
+        question_indicators = [
+            "please share", "please provide", "need more", "can you tell",
+            "what is your", "how much", "how many", "which type",
+            "📊 Please share", "information:", "details:", "form_data"
+        ]
+        
+        # Also check for form data (finance agent forms)
+        has_form = "form_data" in response.get("result", {})
+        
+        return has_form or any(indicator in answer.lower() for indicator in question_indicators)
+    
+    def _llm_based_agent_selection(self, query: str, location: str = None, crop: str = None, session_id: str = None) -> tuple[str, Dict[str, Any]]:
+        """Enhanced LLM-based agent selection with conversation context"""
+        try:
+            # Get conversation context for better routing
+            context_info = conversation_manager.get_context_for_routing(session_id) if session_id else {}
+            
+            # Create enhanced prompt with conversation context
+            context_section = ""
+            if context_info:
+                context_section = f"""
+CONVERSATION CONTEXT:
+- Session: {context_info.get('session_id', 'new')}
+- Previous Agent: {context_info.get('active_agent', 'none')}
+- User Profile: {context_info.get('user_profile', {})}
+- Summary: {context_info.get('conversation_summary', 'No previous context')}
+"""
+            
+            agent_selection_prompt = f"""You are an intelligent agricultural advisor router. Analyze this query and determine which specialized agent should handle it.
+
+QUERY: "{query}"
+LOCATION: {location or "Not specified"}
+CROP: {crop or "Not specified"}
+{context_section}
+
+AVAILABLE AGENTS:
+1. WEATHER AGENT - Handles weather forecasts, climate conditions, rainfall, drought, temperature, irrigation timing based on weather
+2. CROP AGENT - Handles crop selection, varieties, planting, cultivation, fertilizers, pest control, diseases, farming techniques  
+3. FINANCE AGENT - Handles market prices, costs, profits, loans, banking, investments, ROI calculations, financial optimization, cost analysis, spending optimization, farm economics
+4. POLICY AGENT - Handles government schemes, subsidies, eligibility, applications, PM-Kisan, insurance, policies
+
+CRITICAL ROUTING RULES:
+- If query contains financial amounts, spending data, costs, or asks for financial optimization → FINANCE AGENT
+- If user provides farm size + costs/spending/expenses → FINANCE AGENT (they want cost optimization)
+- If query mentions "spend", "cost", "expense", "optimize", "profit", "investment" → FINANCE AGENT
+- If query asks "how much", "what is cost", "reduce cost", "save money" → FINANCE AGENT
+- Only route to CROP AGENT for pure agricultural techniques without financial focus
+
+EXAMPLES:
+- "My farm is 5 acres, I spend ₹30,000 on fertilizers" → FINANCE (contains spending data)
+- "How can I reduce my farming costs?" → FINANCE (cost optimization)
+- "What fertilizer should I use for wheat?" → CROP (technical farming)
+- "Which crop is suitable for my region?" → CROP (technical farming)
+
+INSTRUCTIONS:
+- Analyze the query and select the MOST appropriate agent
+- Consider conversation context if available  
+- Prioritize FINANCE AGENT when financial data or optimization is mentioned
+- Choose only ONE agent: weather, crop, finance, or policy
+- Respond with ONLY valid JSON, no additional text
+
+RESPOND WITH EXACTLY THIS JSON FORMAT:
+{{
+    "selected_agent": "finance",
+    "reasoning": "Query contains financial data and spending information requiring cost optimization analysis",
+    "confidence": 0.9,
+    "query_type": "financial_optimization",
+    "priority_info": "Farm cost analysis and optimization"
+}}"""
+            
+            logger.info("🤖 QUERYING LLM FOR CONTEXT-AWARE AGENT SELECTION...")
+            llm_response = self.llm_client.generate_text(agent_selection_prompt)
+            
+            logger.info(f"🔍 RAW LLM RESPONSE: {llm_response[:200]}...")
+            
+            try:
+                cleaned_json = self._clean_json_response(llm_response)
+                logger.info(f"🔍 CLEANED JSON: {cleaned_json}")
+                
+                selection_result = json.loads(cleaned_json)
+                
+                selected_agent = selection_result.get("selected_agent", "crop")
+                reasoning = selection_result.get("reasoning", "LLM selection")
+                confidence = selection_result.get("confidence", 0.8)
+                
+                logger.info(f"🤖 LLM SELECTION: {selected_agent} | Reasoning: {reasoning} | Confidence: {confidence}")
+                
+                # Execute the selected agent with session awareness
+                return self._execute_selected_agent(selected_agent, query, location, crop, session_id, selection_result)
+                
+            except (json.JSONDecodeError, ValueError) as e:
+                logger.warning(f"⚠️ LLM response JSON parsing failed: {str(e)}")
+                logger.warning(f"⚠️ Raw response: {llm_response}")
+                return None, None
+                
+        except Exception as e:
+            logger.error(f"❌ LLM AGENT SELECTION FAILED: {str(e)}")
+            return None, None
+    
+    def _execute_selected_agent(self, selected_agent: str, query: str, location: str, crop: str, session_id: str, selection_result: Dict[str, Any]) -> tuple[str, Dict[str, Any]]:
+        """Execute the selected agent with session awareness"""
+        reasoning = selection_result.get("reasoning", "LLM selection")
+        confidence = selection_result.get("confidence", 0.8)
+        
+        # Execute the selected agent
+        if selected_agent == "weather":
+            response = self.agents["weather"].process_query(query, location, crop)
+            agent_name = "weather_agent"
+        elif selected_agent == "finance":
+            # Pass session_id to finance agent for session management
+            if hasattr(self.agents["finance"], 'process_query'):
+                import inspect
+                sig = inspect.signature(self.agents["finance"].process_query)
+                if 'session_id' in sig.parameters:
+                    response = self.agents["finance"].process_query(query, location, crop, session_id)
+                else:
+                    response = self.agents["finance"].process_query(query, location, crop)
+            else:
+                response = self.agents["finance"].process_query(query, location, crop)
+            agent_name = "finance_agent"
+        elif selected_agent == "policy":
+            response = self.agents["policy"].process_query(query, location, crop)
+            agent_name = "policy_agent"
+        else:  # Default to crop agent
+            response = self.agents["crop"].process_query(query, location, crop)
+            agent_name = "crop_agent"
+        
+        # Add LLM routing metadata to response
+        if isinstance(response, dict):
+            response["llm_routing"] = {
+                "reasoning": reasoning,
+                "confidence": confidence,
+                "query_type": selection_result.get("query_type", "agricultural"),
+                "session_id": session_id
+            }
+        
+        return agent_name, response
+    
+
+    
+    async def process_query_async(self, query: str, location: str = None, crop: str = None, session_id: str = None) -> Dict[str, Any]:
         """Process a query through the supervisor workflow"""
         logger.info(f"🚀 STARTING SUPERVISOR WORKFLOW: Query='{query}' | Location='{location or 'N/A'}' | Crop='{crop or 'N/A'}'")
         try:
@@ -664,7 +988,9 @@ class SupervisorAgent:
                 "confidence": result.get("confidence", 0.0),
                 "agents_consulted": [resp.get("agent") for resp in result.get("agent_responses", [])],
                 "agent_used": "supervisor",
-                "workflow_trace": result.get("workflow_step", "completed")
+                "workflow_trace": result.get("workflow_step", "completed"),
+                "session_id": session_id if 'session_id' in locals() else None,
+                "conversation_context": conversation_manager.get_context_for_routing(session_id) if 'session_id' in locals() and session_id else None
             }
             logger.info(f"🎉 SUPERVISOR WORKFLOW SUCCESS: Agents consulted={final_result['agents_consulted']} | Confidence={final_result['confidence']} | Workflow trace={final_result['workflow_trace']}")
             return final_result
@@ -680,20 +1006,25 @@ class SupervisorAgent:
                 "workflow_trace": "error"
             }
     
-    def process_query(self, query: str, location: str = None, crop: str = None) -> Dict[str, Any]:
-        """Synchronous wrapper for async processing"""
-        logger.info(f"🔄 SYNC PROCESS QUERY CALLED: Query='{query}'")
+    def process_query(self, query: str, location: str = None, crop: str = None, session_id: str = None) -> Dict[str, Any]:
+        """Synchronous wrapper for async processing with conversation context"""
+        logger.info(f"🔄 SYNC PROCESS QUERY CALLED: Query='{query}' | Session='{session_id or 'new'}'")
         try:
-            # Check if we're already in an event loop
+            # Always use conversation-aware sync execution when session_id is provided
+            if session_id:
+                logger.info("🔄 SESSION PROVIDED: Using conversation-aware sync execution")
+                return self._process_query_sync(query, location, crop, session_id)
+            
+            # Check if we're already in an event loop for non-session queries
             try:
                 loop = asyncio.get_running_loop()
                 # We're in an async context, so we need to handle this differently
                 logger.info("🔄 DETECTED RUNNING EVENT LOOP: Using sync execution")
-                return self._process_query_sync(query, location, crop)
+                return self._process_query_sync(query, location, crop, session_id)
             except RuntimeError:
                 # No running loop, safe to use asyncio.run()
                 logger.info("🔄 NO RUNNING EVENT LOOP: Using async execution")
-                return asyncio.run(self.process_query_async(query, location, crop))
+                return asyncio.run(self.process_query_async(query, location, crop, session_id))
         except Exception as e:
             logger.error(f"❌ SYNC PROCESS QUERY FAILED: {str(e)}")
             return {
@@ -705,81 +1036,32 @@ class SupervisorAgent:
                 "workflow_trace": "error"
             }
     
-    def _process_query_sync(self, query: str, location: str = None, crop: str = None) -> Dict[str, Any]:
-        """Synchronous version that doesn't use LangGraph workflow"""
-        logger.info(f"🔄 SYNC EXECUTION: Query='{query}' | Location='{location or 'N/A'}' | Crop='{crop or 'N/A'}'")
+    def _process_query_sync(self, query: str, location: str = None, crop: str = None, session_id: str = None) -> Dict[str, Any]:
+        """Synchronous version with conversation-aware routing"""
+        logger.info(f"🔄 SYNC EXECUTION with CONVERSATION CONTEXT: Query='{query}' | Location='{location or 'N/A'}' | Crop='{crop or 'N/A'}' | Session='{session_id or 'new'}'")
+        
         try:
-            # Direct agent execution without LangGraph when in async context
-            query_lower = query.lower()
+            # Get or create conversation context
+            if not session_id:
+                session_id = f"session_{datetime.now().timestamp()}"
             
-            # Improved routing with fuzzy matching and comprehensive keywords
-            # Policy-related (highest priority - most specific)
-            policy_patterns = [
-                # Schemes and subsidies
-                "subsidy", "subsidies", "scheme", "schemes", "policy", "policies", 
-                "government", "benefit", "benefits", "allowance", "grant", "grants",
-                
-                # PM-Kisan variations (fuzzy matching)
-                "pm kisan", "pm-kisan", "pmkisan", "pradhan mantri", "pradhanmantri",
-                "pm kissan", "pm-kissan", "centrail pm", "central pm",
-                
-                # Application/eligibility terms
-                "apply", "application", "eligible", "eligibility", "registration",
-                "form", "document", "documents", "how to get", "how to apply",
-                
-                # Specific schemes
-                "nabard", "kisan credit", "crop insurance", "fasal bima",
-                "soil health", "pension", "msp", "minimum support",
-                
-                # Action words for schemes
-                "enroll", "enrollment", "register", "registration"
-            ]
+            context = conversation_manager.get_or_create_context(session_id)
             
-            # Weather-related  
-            weather_patterns = [
-                "weather", "rain", "rainfall", "drought", "temperature", "forecast",
-                "storm", "cyclone", "humidity", "wind", "climate", "monsoon",
-                "precipitation", "alert", "warning"
-            ]
+            # Check if this is a response to an active agent conversation
+            is_response_to_agent, active_agent = conversation_manager.should_route_to_active_agent(session_id, query)
             
-            # Crop management
-            crop_patterns = [
-                "fertilizer", "fertiliser", "npk", "urea", "pest", "pests", 
-                "disease", "diseases", "plant", "planting", "sow", "sowing",
-                "transplant", "spacing", "growth", "harvest", "harvesting",
-                "irrigation", "watering", "seed", "seeds", "variety"
-            ]
-            
-            # Finance/market related
-            finance_patterns = [
-                "price", "prices", "market", "mandi", "rate", "rates", "cost", 
-                "costs", "loan", "loans", "credit", "bank", "banking",
-                "finance", "financial", "money", "investment", "profit",
-                "selling", "buying", "trade"
-            ]
-            
-            # Check patterns in order of specificity
-            if any(pattern in query_lower for pattern in policy_patterns):
-                logger.info(f"📋 SYNC ROUTING: Policy agent (matched policy patterns)")
-                response = self.agents["policy"].process_query(query, location, crop)
-                agent_name = "policy_agent"
-            elif any(pattern in query_lower for pattern in weather_patterns):
-                logger.info(f"🌤️ SYNC ROUTING: Weather agent (matched weather patterns)")
-                response = self.agents["weather"].process_query(query, location, crop)
-                agent_name = "weather_agent"
-            elif any(pattern in query_lower for pattern in finance_patterns):
-                logger.info(f"💰 SYNC ROUTING: Finance agent (matched finance patterns)")
-                response = self.agents["finance"].process_query(query, location, crop)
-                agent_name = "finance_agent"
-            elif any(pattern in query_lower for pattern in crop_patterns):
-                logger.info(f"🌱 SYNC ROUTING: Crop agent (matched crop patterns)")
-                response = self.agents["crop"].process_query(query, location, crop)
-                agent_name = "crop_agent"
+            if is_response_to_agent and active_agent:
+                logger.info(f"💬 CONTINUING CONVERSATION with {active_agent}")
+                # Route directly to the active agent without re-analysis
+                agent_name, response = self._route_to_active_agent(active_agent, query, location, crop, session_id)
             else:
-                # Default to policy agent for application/general questions
-                logger.info("📋 SYNC ROUTING: Default to policy agent (general agricultural query)")
-                response = self.agents["policy"].process_query(query, location, crop)
-                agent_name = "policy_agent"
+                logger.info(f"🧠 NEW CONVERSATION: Using pure LLM intelligent routing")
+                # Use pure LLM for intelligent agent selection - no keywords
+                agent_name, response = self._pure_llm_agent_selection(query, location, crop, session_id)
+            
+            # Update conversation context
+            is_followup_question = self._response_has_followup_questions(response)
+            conversation_manager.update_context(session_id, query, agent_name, response, is_followup_question)
             
             # Extract answer from various response formats
             answer = (
@@ -794,10 +1076,12 @@ class SupervisorAgent:
                 "confidence": response.get("confidence", 0.7),
                 "agents_consulted": [agent_name],
                 "agent_used": "supervisor_sync",
-                "workflow_trace": "sync_execution"
+                "workflow_trace": "sync_execution",
+                "session_id": session_id,
+                "conversation_context": conversation_manager.get_context_for_routing(session_id) if session_id else None
             }
             
-            logger.info(f"✅ SYNC EXECUTION SUCCESS: Agent={agent_name} | Confidence={final_result['confidence']}")
+            logger.info(f"✅ SYNC EXECUTION SUCCESS: Agent={agent_name} | Session={session_id} | Confidence={final_result['confidence']}")
             return final_result
             
         except Exception as e:

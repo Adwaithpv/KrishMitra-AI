@@ -249,7 +249,7 @@ async def startup_event():
             globals()["_local_doc_vectors"] = mat
 
 
-def _run_query(q: Query):
+def _run_query(q: Query, request=None):
     import time
     start_time = time.time()
     
@@ -367,7 +367,17 @@ def _run_query(q: Query):
 
     # Try supervisor first (LangGraph-based agent orchestration)
     supervisor = get_supervisor()
-    supervisor_response = supervisor.process_query(q.text, q.location, q.crop)
+    
+    # Generate or extract session ID for conversation continuity
+    session_id = None
+    if request:
+        session_id = request.headers.get('X-Session-ID')
+    
+    if not session_id:
+        import uuid
+        session_id = str(uuid.uuid4())[:12]
+    
+    supervisor_response = supervisor.process_query(q.text, q.location, q.crop, session_id)
     
     # Calculate response time
     response_time = time.time() - start_time
@@ -377,11 +387,14 @@ def _run_query(q: Query):
     agents_consulted = supervisor_response.get('agents_consulted', [])
     workflow_trace = supervisor_response.get('workflow_trace', 'unknown')
     
-    # Use lower threshold for weather-related queries since they use real-time data
-    weather_in_agents = any("weather" in str(agent) for agent in agents_consulted)
-    confidence_threshold = 0.4 if weather_in_agents else 0.6
+    # Extract session ID from supervisor response (it may have been generated/updated)
+    supervisor_session_id = supervisor_response.get('session_id', session_id)
     
-    if supervisor_confidence > confidence_threshold:
+    # Use lower threshold for all queries to prioritize supervisor routing
+    confidence_threshold = 0.3  # Lower threshold to trust supervisor more
+    
+    # Always use supervisor response if agents were consulted or we have a session ID
+    if supervisor_confidence > confidence_threshold or agents_consulted or supervisor_session_id:
         agent_used = supervisor_response.get("agent_used", "supervisor")
         answer = supervisor_response.get("answer", "")
         confidence = supervisor_response.get("confidence", 0.0)
@@ -431,8 +444,13 @@ def _run_query(q: Query):
         "confidence": confidence,
         "response_time": round(response_time, 3),
         "agent_used": agent_used,
+        "agents_consulted": agents_consulted,
+        "workflow_trace": workflow_trace,
         "realtime_insights": len(realtime_insights),
-        "cache_hit": False
+        "cache_hit": False,
+        "session_id": supervisor_session_id,  # Use session ID from supervisor response
+        "conversation_context": supervisor_response.get("conversation_context"),
+        "llm_routing": supervisor_response.get("llm_routing")
     }
     
     # Cache the result (TTL: 30 minutes for general queries)
@@ -450,7 +468,7 @@ async def handle_query(request: Request, q: Query):
         if security_manager.is_ip_blocked(client_ip):
             raise HTTPException(status_code=403, detail="IP blocked due to suspicious activity")
         
-        return _run_query(q)
+        return _run_query(q, request)
     except Exception as e:
         metrics_collector.record_query(
             query=q.text,
@@ -471,7 +489,7 @@ async def handle_query_get(request: Request, text: str, location: Optional[str] 
         if security_manager.is_ip_blocked(client_ip):
             raise HTTPException(status_code=403, detail="IP blocked due to suspicious activity")
         
-        return _run_query(q)
+        return _run_query(q, request)
     except Exception as e:
         metrics_collector.record_query(
             query=q.text,
