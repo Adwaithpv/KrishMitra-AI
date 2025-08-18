@@ -3,6 +3,7 @@ import 'package:http/http.dart' as http;
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 import '../models/query_response.dart';
+import '../models/chat_message.dart';
 import '../models/weather_models.dart';
 import '../services/weather_service.dart';
 
@@ -12,6 +13,7 @@ class AgriProvider with ChangeNotifier {
   bool _isLoading = false;
   String _error = '';
   List<QueryResponse> _history = [];
+  List<ChatMessage> _messages = [];
   String? _userLocation; // Will be set from GPS location
   String? _userCrop;
   UserLocation? _detectedLocation; // GPS location data
@@ -21,6 +23,7 @@ class AgriProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
   String get error => _error;
   List<QueryResponse> get history => _history;
+  List<ChatMessage> get messages => _messages;
   Future<void> _ensureSession() async {
     if (_sessionId != null) return;
     final prefs = await SharedPreferences.getInstance();
@@ -86,6 +89,10 @@ class AgriProvider with ChangeNotifier {
   }
 
   Future<QueryResponse?> sendQuery(String query) async {
+    // record user message
+    _messages.add(ChatMessage(isUser: true, text: query));
+    notifyListeners();
+
     _isLoading = true;
     _error = '';
     notifyListeners();
@@ -115,6 +122,7 @@ class AgriProvider with ChangeNotifier {
         final queryResponse = QueryResponse.fromJson(data);
         
         _history.insert(0, queryResponse);
+        _messages.add(ChatMessage(isUser: false, text: queryResponse.answer, response: queryResponse));
         _isLoading = false;
         notifyListeners();
         return queryResponse;
@@ -133,6 +141,9 @@ class AgriProvider with ChangeNotifier {
   }
 
   Future<QueryResponse?> testAgents(String query) async {
+    _messages.add(ChatMessage(isUser: true, text: query));
+    notifyListeners();
+
     _isLoading = true;
     _error = '';
     notifyListeners();
@@ -162,6 +173,7 @@ class AgriProvider with ChangeNotifier {
         final queryResponse = QueryResponse.fromJson(data);
         
         _history.insert(0, queryResponse);
+        _messages.add(ChatMessage(isUser: false, text: queryResponse.answer, response: queryResponse));
         _isLoading = false;
         notifyListeners();
         return queryResponse;
@@ -181,6 +193,9 @@ class AgriProvider with ChangeNotifier {
 
   /// Test the LangGraph supervisor directly with detailed workflow information
   Future<QueryResponse?> testSupervisor(String query) async {
+    _messages.add(ChatMessage(isUser: true, text: query));
+    notifyListeners();
+
     _isLoading = true;
     _error = '';
     notifyListeners();
@@ -217,6 +232,7 @@ class AgriProvider with ChangeNotifier {
         print('🔍 Agents Consulted: ${data['agents_consulted']}');
         
         _history.insert(0, queryResponse);
+        _messages.add(ChatMessage(isUser: false, text: queryResponse.answer, response: queryResponse));
         _isLoading = false;
         notifyListeners();
         return queryResponse;
@@ -236,6 +252,7 @@ class AgriProvider with ChangeNotifier {
 
   void clearHistory() {
     _history.clear();
+    _messages.clear();
     notifyListeners();
   }
 

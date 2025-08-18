@@ -5,13 +5,20 @@ Crop Agent for crop-specific agricultural advice
 from typing import Dict, List, Any, Optional
 from datetime import datetime
 
+from ..llm_client import LLMClient
 
 class CropAgent:
     def __init__(self):
         self.name = "crop_agent"
+        self.llm_client = LLMClient()
     
     def process_query(self, query: str, location: str = None, crop: str = None, context: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """Process crop-related queries"""
+        # Prefer LLM-based comprehensive crop advice
+        try:
+            return self._generate_llm_crop_advice(query, location, crop, context)
+        except Exception:
+            pass
         query_lower = query.lower()
         
         # Irrigation queries
@@ -40,6 +47,57 @@ class CropAgent:
                 base["result"]["advice"] = pref + base["result"]["advice"]
                 return base
             return self._get_general_crop_advice(location, crop)
+
+    def _generate_llm_crop_advice(self, query: str, location: Optional[str], crop: Optional[str], context: Optional[Dict[str, Any]]) -> Dict[str, Any]:
+        """Use LLM to generate comprehensive crop advice: suitability, irrigation, fertilizer, pests, planting, best practices."""
+        context_summary = context.get("conversation_summary") if context else None
+        last_q = context.get("last_agent_prompt") if context else None
+        last_a = context.get("last_user_answer") if context else None
+        prompt = f"""
+You are an expert agronomist. Provide practical, specific advice.
+
+CONSTRAINTS:
+- You have a strict output budget. Keep the response under the model's max tokens.
+- Prioritize finishing each section cleanly. If running out of space, truncate sections gracefully with a concluding sentence rather than mid-sentence cuts.
+- Be concise; prefer bullet points over long paragraphs.
+
+USER QUERY: "{query}"
+LOCATION: {location or 'Not specified'}
+TARGET CROP: {crop or 'Not specified (recommend suitable crops)'}
+{('CONTEXT SUMMARY:\n' + context_summary) if context_summary else ''}
+{('Last agent prompt: ' + last_q) if last_q else ''}
+{('Last user reply: ' + last_a) if last_a else ''}
+
+REQUIREMENTS:
+- If the user asks which crop is suitable for their location, recommend top 3 crops for that region with reasoning.
+- Otherwise, answer their crop-related question with concise, actionable steps.
+
+Provide relevant sections (omit irrelevant ones). Keep total length compact so it fits within the output budget:
+1) Suitability/Varieties
+2) Water & Irrigation
+3) Soil & Fertility (NPK)
+4) Planting Window & Spacing
+5) Pest/Disease Management
+6) Yield & Economics (high-level)
+7) Best Practices & Tips
+""".strip()
+        advice = self.llm_client.generate_text(prompt)
+        urgency = "medium"
+        if any(w in advice.lower() for w in ["urgent", "immediate", "critical"]):
+            urgency = "high"
+        evidence = [{
+            "source": "llm_agronomy",
+            "excerpt": advice[:180],
+            "date": datetime.now().strftime("%Y-%m-%d"),
+            "geo": location or "general",
+            "crop": crop or "various"
+        }]
+        return {
+            "agent": self.name,
+            "result": {"advice": advice, "urgency": urgency},
+            "evidence": evidence,
+            "confidence": 0.9
+        }
     
     def _get_irrigation_advice(self, location: str, crop: str) -> Dict[str, Any]:
         """Provide irrigation advice"""

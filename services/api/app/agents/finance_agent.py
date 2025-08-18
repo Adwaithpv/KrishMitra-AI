@@ -297,6 +297,10 @@ REQUIREMENTS FOR YOUR RESPONSE:
 7. Consider local market conditions and regional factors
 8. Provide specific financial metrics to track progress
 
+CONSTRAINTS:
+- Keep the response within the model's output budget to avoid truncation.
+- If space is running low, summarize remaining items succinctly and end with a brief conclusion.
+
 Format your response with clear headings and bullet points for easy reading.
 Use emojis sparingly and appropriately.
 Ensure all advice is practical and implementable for the given farm profile.

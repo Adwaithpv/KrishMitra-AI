@@ -65,7 +65,7 @@ class LLMClient:
                 response = self.gemini_model.generate_content(
                     prompt,
                     generation_config=genai.types.GenerationConfig(
-                        max_output_tokens=500,
+                        max_output_tokens=int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "1200")),
                         temperature=0.3,
                     )
                 )
@@ -75,7 +75,12 @@ class LLMClient:
                 return "Unable to generate response at this time."
         elif self.local_pipeline:
             try:
-                response = self.local_pipeline(prompt, max_length=400, do_sample=True, temperature=0.7)
+                response = self.local_pipeline(
+                    prompt,
+                    max_length=int(os.getenv("LOCAL_MAX_LENGTH", "800")),
+                    do_sample=True,
+                    temperature=0.7,
+                )
                 generated_text = response[0]['generated_text']
                 answer = generated_text[len(prompt):].strip()
                 return answer if answer else "Unable to generate response."
@@ -92,7 +97,7 @@ class LLMClient:
                 response = self.gemini_model.generate_content(
                     custom_prompt,
                     generation_config=genai.types.GenerationConfig(
-                        max_output_tokens=500,  # Longer response for detailed analysis
+                        max_output_tokens=int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "1200")),  # Longer response for detailed analysis
                         temperature=0.3,
                     )
                 )
@@ -102,7 +107,12 @@ class LLMClient:
                 return "Unable to generate detailed agricultural analysis at this time. Please consult local weather services and agricultural experts."
         elif self.local_pipeline:
             try:
-                response = self.local_pipeline(custom_prompt, max_length=400, do_sample=True, temperature=0.7)
+                response = self.local_pipeline(
+                    custom_prompt,
+                    max_length=int(os.getenv("LOCAL_MAX_LENGTH", "800")),
+                    do_sample=True,
+                    temperature=0.7,
+                )
                 generated_text = response[0]['generated_text']
                 answer = generated_text[len(custom_prompt):].strip()
                 return answer if answer else "Based on the weather data, please consult agricultural experts for specific advice."
@@ -136,7 +146,7 @@ Answer:"""
             response = self.gemini_model.generate_content(
                 prompt,
                 generation_config=genai.types.GenerationConfig(
-                    max_output_tokens=300,
+                    max_output_tokens=int(os.getenv("GEMINI_MAX_OUTPUT_TOKENS", "1200")),
                     temperature=0.3,
                 )
             )
@@ -150,7 +160,12 @@ Answer:"""
         prompt = f"Question: {query}\nEvidence: {evidence}\nAnswer:"
         
         try:
-            response = self.local_pipeline(prompt, max_length=200, do_sample=True, temperature=0.7)
+            response = self.local_pipeline(
+                prompt,
+                max_length=int(os.getenv("LOCAL_MAX_LENGTH", "800")),
+                do_sample=True,
+                temperature=0.7,
+            )
             # Extract just the generated part
             generated_text = response[0]['generated_text']
             # Remove the original prompt

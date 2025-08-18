@@ -2,10 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:speech_to_text/speech_to_text.dart';
 import 'package:flutter_tts/flutter_tts.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter/rendering.dart';
 import '../providers/agri_provider.dart';
 import '../models/query_response.dart';
 import '../widgets/weather_forecast_widget.dart';
 import '../widgets/response_card.dart';
+import '../models/chat_message.dart';
+import '../widgets/chat_bubble.dart';
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -21,6 +25,10 @@ class _HomeScreenState extends State<HomeScreen> {
   bool _isListening = false;
   bool _isSpeaking = false;
   bool _debugMode = false; // Toggle for supervisor testing
+  bool _showSuggestions = true;
+  final ScrollController _chatController = ScrollController();
+  final GlobalKey _composerKey = GlobalKey();
+  double _composerHeight = 0;
 
   @override
   void initState() {
@@ -45,6 +53,36 @@ class _HomeScreenState extends State<HomeScreen> {
     await _flutterTts.setSpeechRate(0.5);
     await _flutterTts.setVolume(1.0);
     await _flutterTts.setPitch(1.0);
+
+    // Handlers to keep UI state in sync with TTS engine
+    _flutterTts.setStartHandler(() {
+      if (mounted) {
+        setState(() {
+          _isSpeaking = true;
+        });
+      }
+    });
+    _flutterTts.setCompletionHandler(() {
+      if (mounted) {
+        setState(() {
+          _isSpeaking = false;
+        });
+      }
+    });
+    _flutterTts.setCancelHandler(() {
+      if (mounted) {
+        setState(() {
+          _isSpeaking = false;
+        });
+      }
+    });
+    _flutterTts.setErrorHandler((message) {
+      if (mounted) {
+        setState(() {
+          _isSpeaking = false;
+        });
+      }
+    });
   }
 
   Future<void> _startListening() async {
@@ -72,16 +110,17 @@ class _HomeScreenState extends State<HomeScreen> {
     });
   }
 
-  Future<void> _speakText(String text) async {
-    if (!_isSpeaking) {
-      setState(() {
-        _isSpeaking = true;
-      });
-      await _flutterTts.speak(text);
-      setState(() {
-        _isSpeaking = false;
-      });
+  Future<void> _toggleSpeak(String text) async {
+    if (_isSpeaking) {
+      await _flutterTts.stop();
+      if (mounted) {
+        setState(() {
+          _isSpeaking = false;
+        });
+      }
+      return;
     }
+    await _flutterTts.speak(text);
   }
 
   Future<void> _sendQuery() async {
@@ -132,6 +171,11 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
       body: Consumer<AgriProvider>(
         builder: (context, provider, child) {
+          // Measure composer, then scroll to bottom with the correct spacer
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            _updateComposerHeight();
+            _scrollToBottom();
+          });
           return Column(
             children: [
               // Compact weather section (expandable)
@@ -157,20 +201,35 @@ class _HomeScreenState extends State<HomeScreen> {
               ),
               // Chat list fills available space
               Expanded(
-                child: provider.history.isEmpty
+                child: provider.messages.isEmpty
                     ? const _EmptyState()
                     : ListView.builder(
-                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                        reverse: true,
-                        itemCount: provider.history.length,
+                        controller: _chatController,
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 8),
+                        itemCount: provider.messages.length + 1,
                         itemBuilder: (context, index) {
-                          final response = provider.history[provider.history.length - 1 - index];
+                          if (index == provider.messages.length) {
+                            final bottomInset = MediaQuery.of(context).viewInsets.bottom;
+                            final spacer = (_composerHeight + bottomInset + 24).clamp(24, 400);
+                            return SizedBox(height: spacer.toDouble());
+                          }
+                          final msg = provider.messages[index];
                           return Padding(
-                            padding: const EdgeInsets.only(bottom: 8),
-                            child: ResponseCard(
-                              response: response,
-                              onSpeak: () => _speakText(response.answer),
-                              isSpeaking: _isSpeaking,
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: ChatBubble(
+                              message: msg,
+                              onCopy: msg.isUser
+                                  ? null
+                                  : () async {
+                                      await Clipboard.setData(ClipboardData(text: msg.text));
+                                      if (context.mounted) {
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Copied to clipboard')),
+                                        );
+                                      }
+                                    },
+                              onSpeak: msg.isUser ? null : () => _toggleSpeak(msg.text),
+                              isSpeaking: _isSpeaking && !msg.isUser,
                             ),
                           );
                         },
@@ -182,7 +241,8 @@ class _HomeScreenState extends State<HomeScreen> {
               SafeArea(
                 top: false,
                 child: Container(
-                  padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
+                  key: _composerKey,
+                  padding: const EdgeInsets.fromLTRB(12, 8, 12, 12),
                   decoration: BoxDecoration(
                     color: Theme.of(context).scaffoldBackgroundColor,
                     boxShadow: const [
@@ -196,30 +256,36 @@ class _HomeScreenState extends State<HomeScreen> {
                   child: Column(
                     mainAxisSize: MainAxisSize.min,
                     children: [
-                      // Crop selection (kept, but compact)
-                      DropdownButtonFormField<String>(
-                        isDense: true,
-                        decoration: const InputDecoration(
-                          labelText: 'Crop',
-                          prefixIcon: Icon(Icons.agriculture_outlined),
-                        ),
-                        value: provider.userCrop,
-                        items: [
-                          'wheat', 'rice', 'cotton', 'maize',
-                          'pulses', 'sugarcane', 'groundnut'
-                        ].map((String value) {
-                          return DropdownMenuItem<String>(
-                            value: value,
-                            child: Text(value),
-                          );
-                        }).toList(),
-                        onChanged: (value) {
-                          if (value != null) provider.setUserCrop(value);
-                        },
+                      // Accessory row: compact controls
+                      Row(
+                        children: [
+                          TextButton.icon(
+                            style: TextButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                              visualDensity: VisualDensity.compact,
+                            ),
+                            onPressed: () => _openCropPicker(context),
+                            icon: const Icon(Icons.agriculture_outlined, size: 18),
+                            label: Text(provider.userCrop != null ? provider.userCrop! : 'Crop'),
+                          ),
+                          const SizedBox(width: 8),
+                          FilterChip(
+                            selected: _showSuggestions,
+                            onSelected: (v) => setState(() => _showSuggestions = v),
+                            label: const Text('Suggestions'),
+                            avatar: const Icon(Icons.bolt, size: 16),
+                          ),
+                        ],
                       ),
-                      const SizedBox(height: 8),
-                      const _SuggestionChips(),
-                      const SizedBox(height: 8),
+                      const SizedBox(height: 6),
+                      if (_showSuggestions)
+                        _SuggestionRow(onPick: (s) {
+                          _queryController.text = s;
+                          _queryController.selection = TextSelection.fromPosition(
+                            TextPosition(offset: _queryController.text.length),
+                          );
+                        }),
+                      const SizedBox(height: 6),
                       TextField(
                         controller: _queryController,
                         minLines: 1,
@@ -251,7 +317,7 @@ class _HomeScreenState extends State<HomeScreen> {
                       if (provider.error.isNotEmpty)
                         Container(
                           width: double.infinity,
-                          margin: const EdgeInsets.only(top: 8),
+                          margin: const EdgeInsets.only(top: 6),
                           padding: const EdgeInsets.all(8),
                           decoration: BoxDecoration(
                             color: Colors.red.shade100,
@@ -278,14 +344,83 @@ class _HomeScreenState extends State<HomeScreen> {
     _queryController.dispose();
     _speechToText.cancel();
     _flutterTts.stop();
+    _chatController.dispose();
     super.dispose();
   }
 
+  Future<void> _openCropPicker(BuildContext context) async {
+    final provider = Provider.of<AgriProvider>(context, listen: false);
+    final crops = <String>['wheat', 'rice', 'cotton', 'maize', 'pulses', 'sugarcane', 'groundnut'];
+    final theme = Theme.of(context);
 
+    await showModalBottomSheet(
+      context: context,
+      backgroundColor: theme.colorScheme.surface,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) {
+        return SafeArea(
+          top: false,
+          child: Padding(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text('Select Crop', style: theme.textTheme.titleLarge?.copyWith(fontWeight: FontWeight.w700)),
+                const SizedBox(height: 12),
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: crops.map((c) {
+                    final selected = provider.userCrop == c;
+                    return ChoiceChip(
+                      label: Text(c),
+                      selected: selected,
+                      onSelected: (_) {
+                        provider.setUserCrop(c);
+                        Navigator.pop(context);
+                      },
+                      avatar: const Icon(Icons.spa, size: 16),
+                    );
+                  }).toList(),
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  void _scrollToBottom() {
+    if (!_chatController.hasClients) return;
+    _chatController.animateTo(
+      _chatController.position.maxScrollExtent,
+      duration: const Duration(milliseconds: 250),
+      curve: Curves.easeOut,
+    );
+  }
+
+  void _updateComposerHeight() {
+    final ctx = _composerKey.currentContext;
+    if (ctx == null) return;
+    final box = ctx.findRenderObject();
+    if (box is RenderBox) {
+      final newHeight = box.size.height;
+      if ((newHeight - _composerHeight).abs() > 1) {
+        setState(() {
+          _composerHeight = newHeight;
+        });
+      }
+    }
+  }
 }
 
-class _SuggestionChips extends StatelessWidget {
-  const _SuggestionChips();
+class _SuggestionRow extends StatelessWidget {
+  final void Function(String) onPick;
+  const _SuggestionRow({required this.onPick});
 
   @override
   Widget build(BuildContext context) {
@@ -297,28 +432,23 @@ class _SuggestionChips extends StatelessWidget {
       'fertilizer recommendation',
       'best sowing time',
     ];
-
-    return Align(
-      alignment: Alignment.centerLeft,
-      child: Wrap(
-        spacing: 8,
-        runSpacing: 8,
-        children: suggestions
-            .map((s) => ActionChip(
-                  label: Text(s),
-                  avatar: const Icon(Icons.bolt, size: 16),
-                  onPressed: () {
-                    // Find the _HomeScreenState to access the controller
-                    final homeState = context.findAncestorStateOfType<_HomeScreenState>();
-                    if (homeState != null) {
-                      homeState._queryController.text = s;
-                      homeState._queryController.selection = TextSelection.fromPosition(
-                        TextPosition(offset: homeState._queryController.text.length),
-                      );
-                    }
-                  },
-                ))
-            .toList(),
+    return SizedBox(
+      height: 36,
+      child: ListView.separated(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 2),
+        itemCount: suggestions.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        itemBuilder: (context, index) {
+          final s = suggestions[index];
+          return ActionChip(
+            label: Text(s, overflow: TextOverflow.ellipsis),
+            avatar: const Icon(Icons.bolt, size: 16),
+            onPressed: () => onPick(s),
+            visualDensity: VisualDensity.compact,
+            materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          );
+        },
       ),
     );
   }

@@ -203,6 +203,10 @@ Please provide:
 4. TIMING RECOMMENDATIONS: Best times for field operations (planting, harvesting, spraying, irrigation)
 5. URGENCY LEVEL: Rate as "low", "medium", or "high" based on immediate weather threats
 
+CONSTRAINTS:
+- Keep the response within the model's output budget to avoid truncation.
+- If running out of space, summarize remaining sections and include a concluding sentence.
+
 Focus on:
 - Irrigation scheduling based on rainfall forecasts
 - Crop protection from extreme weather
