@@ -1,5 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android"
-    package="com.example.agri_advisor">
+    package="com.example.krishmitra_ai">
 
     <!-- Location permissions for weather forecasting -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
@@ -8,7 +8,7 @@
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
     <application
-        android:label="Agri Advisor"
+        android:label="KrishMitraAI"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity

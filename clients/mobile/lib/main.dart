@@ -10,11 +10,11 @@ import 'package:flutter_localizations/flutter_localizations.dart';
 import 'l10n/app_localizations.dart';
 
 void main() {
-  runApp(const AgriAdvisorApp());
+  runApp(const KrishMitraAIApp());
 }
 
-class AgriAdvisorApp extends StatelessWidget {
-  const AgriAdvisorApp({super.key});
+class KrishMitraAIApp extends StatelessWidget {
+  const KrishMitraAIApp({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -25,7 +25,7 @@ class AgriAdvisorApp extends StatelessWidget {
       ],
       child: Consumer<AgriProvider>(
         builder: (context, agri, _) => MaterialApp(
-          title: 'Agri Advisor',
+          title: 'KrishMitraAI',
           theme: _buildTheme(),
           locale: Locale(agri.languageCode),
           supportedLocales: AppLocalizations.supportedLocales,

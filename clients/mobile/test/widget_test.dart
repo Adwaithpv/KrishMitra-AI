@@ -8,15 +8,15 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
-import 'package:agri_advisor/main.dart';
+import 'package:krishmitra_ai/main.dart';
 
 void main() {
   testWidgets('App launches correctly', (WidgetTester tester) async {
     // Build our app and trigger a frame.
-    await tester.pumpWidget(const AgriAdvisorApp());
+    await tester.pumpWidget(const KrishMitraAIApp());
 
     // Verify that the app title is displayed.
-    expect(find.text('Agri Advisor'), findsOneWidget);
+          expect(find.text('KrishMitraAI'), findsOneWidget);
     
     // Verify that the navigation bar is present.
     expect(find.text('Home'), findsOneWidget);

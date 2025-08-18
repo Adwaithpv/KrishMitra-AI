@@ -1,6 +1,6 @@
-# Agri Advisor Mobile App
+# KrishMitraAI Mobile App
 
-A Flutter mobile application for the Agentic Agri Advisor system.
+A Flutter mobile application for the KrishMitraAI Agricultural Advisor system.
 
 ## Features
 

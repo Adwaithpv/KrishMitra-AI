@@ -26,7 +26,7 @@ class AppLocalizations {
 
   static final Map<String, Map<String, String>> _localizedValues = {
     'en': {
-      'appTitle': 'Agri Advisor',
+      'appTitle': 'KrishMitraAI',
       'navHome': 'Home',
       'navHistory': 'History',
       'navSettings': 'Settings',
@@ -55,7 +55,7 @@ class AppLocalizations {
       'selectPrimaryCrop': 'Select Primary Crop',
       'language': 'Language',
       'selectLanguage': 'Select Language',
-      'homeTitle': 'Agri Advisor',
+      'homeTitle': 'KrishMitraAI',
       'weatherAndForecast': 'Weather & forecast',
       'suggestions': 'Suggestions',
       'crop': 'Crop',
@@ -70,7 +70,7 @@ class AppLocalizations {
       'emptyStateTitle': 'Ask a question to get started!',
       'emptyStateSubtitle': 'Try: "irrigation for wheat" or "weather alert"',
       'details': 'Details',
-      'agriAdvisorResponse': 'Agri Advisor Response',
+      'agriAdvisorResponse': 'KrishMitraAI Response',
       'copy': 'Copy',
       'speak': 'Speak',
       'supportingEvidence': 'Supporting Evidence',
@@ -91,7 +91,7 @@ class AppLocalizations {
       'historyCleared': 'History cleared',
     },
     'hi': {
-      'appTitle': 'कृषि सलाहकार',
+      'appTitle': 'कृषि मित्र AI',
       'navHome': 'होम',
       'navHistory': 'इतिहास',
       'navSettings': 'सेटिंग्स',
@@ -120,7 +120,7 @@ class AppLocalizations {
       'selectPrimaryCrop': 'मुख्य फसल चुनें',
       'language': 'भाषा',
       'selectLanguage': 'भाषा चुनें',
-      'homeTitle': 'कृषि सलाहकार',
+      'homeTitle': 'कृषि मित्र AI',
       'weatherAndForecast': 'मौसम और पूर्वानुमान',
       'suggestions': 'सुझाव',
       'crop': 'फसल',
@@ -135,7 +135,7 @@ class AppLocalizations {
       'emptyStateTitle': 'शुरू करने के लिए कोई प्रश्न पूछें!',
       'emptyStateSubtitle': 'आजमाएं: "गेहूं की सिंचाई" या "मौसम चेतावनी"',
       'details': 'विवरण',
-      'agriAdvisorResponse': 'कृषि सलाहकार उत्तर',
+      'agriAdvisorResponse': 'कृषि मित्र AI उत्तर',
       'copy': 'कॉपी',
       'speak': 'बोलें',
       'supportingEvidence': 'समर्थन साक्ष्य',

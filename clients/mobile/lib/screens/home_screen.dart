@@ -561,7 +561,7 @@ class _WelcomeCard extends StatelessWidget {
                 const SizedBox(width: 12),
                 Expanded(
                   child: Text(
-                    'Welcome to Agri Advisor',
+                    'Welcome to KrishMitraAI',
                     style: Theme.of(context).textTheme.titleLarge?.copyWith(
                           color: Colors.white,
                           fontWeight: FontWeight.w800,

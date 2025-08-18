@@ -1,97 +1,198 @@
-# Agentic Agri Advisor
+# KrishMitraAI - Agentic Agricultural Advisor
 
-A comprehensive agricultural advisory system with AI agents, RAG pipeline, and mobile frontend.
+A comprehensive AI-powered agricultural advisory system that combines multiple specialized agents, real-time data integration, and a modern mobile application to provide farmers with intelligent, contextual agricultural guidance.
 
-## 🚀 Current Status
+## 🌾 Solution Overview
 
-✅ **Phase 1**: Monorepo scaffolding - COMPLETE  
-✅ **Phase 2**: RAG pipeline with vector store - COMPLETE  
-✅ **Phase 3**: LLM integration - COMPLETE  
-✅ **Phase 4**: Agent system - COMPLETE  
-✅ **Phase 5**: Mobile frontend - COMPLETE  
-✅ **Phase 6**: Advanced features & production readiness - COMPLETE  
+KrishMitraAI is an intelligent agricultural advisory platform that leverages advanced AI agents, real-time data sources, and a sophisticated RAG (Retrieval-Augmented Generation) pipeline to provide farmers with personalized, evidence-based agricultural advice. The system addresses the critical need for accessible, reliable agricultural guidance in India and other developing regions.
 
-## 🏗️ Architecture
+### 🎯 Key Problems Solved
+
+- **Information Accessibility**: Provides instant access to agricultural knowledge through natural language queries
+- **Real-time Decision Support**: Integrates live weather data, market prices, and policy updates
+- **Personalized Guidance**: Tailors advice based on location, crop type, and farming context
+- **Multi-domain Expertise**: Covers weather, crop management, financial planning, and government policies
+- **Language Accessibility**: Supports multiple languages for broader farmer reach
+
+## 🏗️ System Architecture
 
 ```
-agri-advisor/
+KrishMitraAI/
 ├── services/
-│   └── api/                 # FastAPI backend
+│   └── api/                    # FastAPI Backend Service
 │       ├── app/
-│       │   ├── agents/      # 4 specialized AI agents
-│       │   ├── main.py      # API endpoints
-│       │   ├── llm_client.py # OpenAI + local LLM
-│       │   ├── etl_service.py # Data ingestion
-│       │   └── coordinator.py # Agent orchestration
+│       │   ├── agents/         # Specialized AI Agents
+│       │   │   ├── weather_agent.py    # Weather analysis & forecasting
+│       │   │   ├── crop_agent.py       # Crop management & advice
+│       │   │   ├── finance_agent.py    # Market prices & financial guidance
+│       │   │   └── policy_agent.py     # Government schemes & policies
+│       │   ├── supervisor.py           # LangGraph-based agent orchestration
+│       │   ├── llm_client.py           # Multi-model LLM integration
+│       │   ├── etl_service.py          # Data ingestion & processing
+│       │   ├── realtime_data.py        # Live data integration
+│       │   ├── cache.py                # Redis-based caching
+│       │   ├── monitoring.py           # Performance monitoring
+│       │   └── security.py             # Rate limiting & security
 │       └── requirements.txt
 ├── clients/
-│   └── mobile/              # Flutter app
+│   └── mobile/                 # Flutter Mobile Application
 │       ├── lib/
-│       │   ├── screens/     # UI screens
-│       │   ├── providers/   # State management
-│       │   └── models/      # Data models
+│       │   ├── screens/        # UI Screens
+│       │   │   ├── home_screen.dart      # Main chat interface
+│       │   │   ├── history_screen.dart   # Query history
+│       │   │   └── settings_screen.dart  # App configuration
+│       │   ├── providers/      # State Management
+│       │   ├── models/         # Data Models
+│       │   ├── services/       # API Integration
+│       │   └── widgets/        # Reusable UI Components
 │       └── pubspec.yaml
 ├── infra/
-│   └── docker-compose.yml   # Qdrant + Postgres
-└── scripts/                 # Setup & testing
+│   ├── docker-compose.yml      # Production infrastructure
+│   ├── grafana/                # Monitoring dashboards
+│   └── prometheus.yml          # Metrics collection
+└── scripts/                    # Testing & development tools
 ```
 
-## 🎯 Features
+## 🤖 AI Agent System
 
-### 🤖 AI Agents with LangGraph Supervisor
-- **Supervisor Agent**: LangGraph-based intelligent orchestration and decision-making
-- **Weather Agent**: LLM-powered analysis of real-time weather data (WeatherAPI.com) with intelligent agricultural insights
-- **Crop Agent**: Irrigation, fertilizer, pest control, planting advice
-- **Finance Agent**: Market prices, subsidies, credit, investment guidance
-- **Policy Agent**: Government schemes, eligibility, application help
+### LangGraph Supervisor
+The system uses a sophisticated LangGraph-based supervisor that intelligently orchestrates multiple specialized agents:
 
-### 🔍 RAG Pipeline
-- Vector search with Qdrant (with local fallback)
-- TF-IDF fallback for lightweight deployment
-- Semantic document retrieval
-- Evidence-based responses
+- **Query Analysis**: Understands user intent and context
+- **Agent Routing**: Routes queries to appropriate specialized agents
+- **Response Synthesis**: Combines multiple agent responses into coherent answers
+- **Quality Validation**: Ensures response accuracy and relevance
 
-### 📱 Mobile App
-- Flutter-based cross-platform app
-- Voice input/output capabilities
-- Real-time query processing
-- Query history and settings
+### Specialized Agents
 
-## 🚀 Quick Start
+#### 🌤️ Weather Agent
+- **Real-time Weather Data**: Integrates with WeatherAPI.com for live weather information
+- **Agricultural Weather Analysis**: Provides weather-based farming recommendations
+- **Forecast Integration**: Uses weather predictions for planning advice
+- **Location-specific Insights**: Tailors advice based on local weather patterns
 
-### 1. Backend Setup
+#### 🌱 Crop Agent
+- **Irrigation Management**: Optimal watering schedules and techniques
+- **Fertilizer Recommendations**: Nutrient management and application timing
+- **Pest Control**: Integrated pest management strategies
+- **Planting Guidance**: Optimal planting times and techniques
+- **Disease Management**: Crop disease identification and treatment
+
+#### 💰 Finance Agent
+- **Market Price Analysis**: Real-time crop price tracking and trends
+- **Subsidy Information**: Government subsidy eligibility and application guidance
+- **Credit Facilities**: Agricultural loan information and requirements
+- **Investment Planning**: Cost-benefit analysis for farming decisions
+- **Financial Risk Assessment**: Market volatility and risk mitigation
+
+#### 📋 Policy Agent
+- **Government Schemes**: Comprehensive information on agricultural policies
+- **Eligibility Assessment**: Automatic eligibility checking for various schemes
+- **Application Guidance**: Step-by-step application process assistance
+- **Documentation Requirements**: Required documents and procedures
+- **Timeline Information**: Application deadlines and processing times
+
+## 🔍 RAG Pipeline
+
+### Vector Search with Qdrant
+- **Semantic Search**: Advanced vector-based document retrieval
+- **Contextual Matching**: Finds relevant agricultural documents and policies
+- **Evidence-based Responses**: Provides source citations for all recommendations
+- **Multi-language Support**: Handles queries in multiple languages
+
+### Fallback Mechanisms
+- **TF-IDF Fallback**: Lightweight text-based search when vector search is unavailable
+- **Local Model Support**: Offline-capable responses using local LLMs
+- **Graceful Degradation**: Maintains functionality even with partial service outages
+
+## 📱 Mobile Application
+
+### Flutter-based Cross-platform App
+- **Native Performance**: Optimized for both Android and iOS
+- **Offline Capability**: Basic functionality without internet connection
+- **Voice Integration**: Speech-to-text and text-to-speech capabilities
+- **Location Services**: Automatic location detection for contextual advice
+- **Multi-language UI**: Supports Hindi and English interfaces
+
+### Key Features
+- **Chat Interface**: Natural conversation with the AI advisor
+- **Query History**: Persistent storage of past interactions
+- **Settings Management**: User preferences and configuration
+- **Real-time Updates**: Live weather and market data integration
+- **Push Notifications**: Weather alerts and important updates
+
+## 🚀 Quick Start Guide
+
+### Prerequisites
+- Python 3.8+ 
+- Flutter SDK 3.0+
+- Docker and Docker Compose
+- Google Gemini API key (for AI responses)
+
+### 1. Clone and Setup Repository
 ```bash
-cd agri-advisor/services/api
+git clone <repository-url>
+cd agri-advisor
+```
+
+### 2. Backend Setup
+
+#### Option A: Local Development
+```bash
+cd services/api
 python -m venv .venv
-.venv\Scripts\activate  # Windows
+
+# Windows
+.venv\Scripts\activate
+# Linux/Mac
+source .venv/bin/activate
+
 pip install -r requirements.txt
 ```
 
-### 2. Environment Configuration
+
+
+### 3. Environment Configuration
 Create `.env` file in `services/api/`:
 ```env
+# Required: Google Gemini API for AI responses
 GEMINI_API_KEY=your_gemini_api_key_here
+
+# Optional: Local model fallback
 LOCAL_MODEL=microsoft/DialoGPT-small
 EMBEDDING_MODEL=all-MiniLM-L6-v2
-QDRANT_URL=http://localhost:6333
+
 ```
 
-### 3. Start Backend
+### 4. Start Backend Services
+
+#### Local Development
 ```bash
+cd services/api
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000 --reload
 ```
 
-### 4. Start Mobile App
+### 5. Mobile App Setup
 ```bash
-cd agri-advisor/clients/mobile
+cd clients/mobile
 flutter pub get
-flutter run -d chrome  # Web
-# or flutter run        # Mobile device
+
+# Run on web (for testing)
+flutter run -d chrome
+
+# Run on connected device
+flutter run
+
+# Build for production
+flutter build apk --release
 ```
 
-**Debug Mode**: Tap the bug icon in the app bar to enable debug mode and test the LangGraph supervisor directly.
+### 6. Verify Installation
+- **Backend Health**: http://127.0.0.1:8000/health
+- **API Documentation**: http://127.0.0.1:8000/docs
+- **Monitoring Dashboard**: http://127.0.0.1:3000 (Grafana)
 
-## 🧪 Testing
+## 🧪 Testing & Validation
 
 ### API Testing
 ```bash
@@ -101,124 +202,147 @@ python scripts/test_api.py
 # Test LangGraph supervisor
 python scripts/test_supervisor.py
 
-# Test agent system
-python scripts/test_agents.py
-
-# Test all features
+# Test all agents
 python scripts/test_all_agents.py
+
+# Test specific features
+python scripts/test_weather_query.py
+python scripts/test_finance_form.py
 ```
 
 ### Manual Testing
-- Backend: http://127.0.0.1:8000
-- Health check: http://127.0.0.1:8000/health
-- Query test: http://127.0.0.1:8000/query?text=wheat%20prices&location=Punjab
+- **Health Check**: `GET /health`
+- **Query Test**: `GET /query?text=wheat%20prices&location=Punjab`
+- **Supervisor Test**: `GET /supervisor?text=weather%20forecast&location=Mumbai`
 
-## 📊 API Endpoints
+### Sample Queries
+- "What's the weather forecast for wheat farming in Punjab?"
+- "Tell me about government subsidies for organic farming"
+- "What are the current market prices for rice?"
+- "How to control pests in tomato crops?"
+
+## 📊 API Reference
 
 ### Core Endpoints
-- `GET /health` - Basic health check
-- `GET /health/detailed` - Detailed health check with component status
-- `GET /query?text=...&location=...&crop=...` - Ask a question (rate limited: 10/min)
-- `POST /query` - Ask a question (JSON body, rate limited: 10/min)
-- `GET /supervisor?text=...&location=...&crop=...` - Test LangGraph supervisor directly
-- `GET /agents?text=...&location=...&crop=...` - Test agent system (legacy endpoint)
-- `POST /ingest` - Ingest new data (rate limited: 5/hour, API key required)
+| Endpoint | Method | Description | Rate Limit |
+|----------|--------|-------------|------------|
+| `/health` | GET | Basic health check | None |
+| `/health/detailed` | GET | Detailed system status | None |
+| `/query` | GET/POST | Ask agricultural questions | 10/min |
+| `/supervisor` | GET | Test LangGraph supervisor | 10/min |
+| `/ingest` | POST | Add new data sources | 5/hour |
 
-### Monitoring & Analytics
-- `GET /metrics` - Application metrics (rate limited: 30/min)
-- `GET /metrics/prometheus` - Prometheus-format metrics
-- `GET /cache/info` - Cache statistics
-- `POST /cache/clear` - Clear cache (admin API key required)
-- `GET /analytics/performance` - Performance analytics
-- `GET /analytics/insights` - User insights
-- `GET /realtime/weather` - Live weather data
-- `GET /realtime/market` - Live market data
+### Query Parameters
+- `text` (required): The agricultural question
+- `location` (optional): Geographic location for context
+- `crop` (optional): Specific crop type for targeted advice
 
-## 🔧 Configuration
+### Response Format
+```json
+{
+  "answer": "Comprehensive agricultural advice...",
+  "confidence": 0.95,
+  "evidence": [
+    {
+      "source": "Government Policy Document",
+      "content": "Relevant policy information..."
+    }
+  ],
+  "agents_used": ["weather", "crop"],
+  "response_time": 1.2
+}
+```
+
+## 🔧 Configuration & Customization
 
 ### Environment Variables
-- `GEMINI_API_KEY`: Google Gemini API key for AI responses
-- `LOCAL_MODEL`: Hugging Face model for local inference
-- `EMBEDDING_MODEL`: Sentence transformer model
-- `QDRANT_URL`: Vector database URL
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `GEMINI_API_KEY` | Google Gemini API key | Required |
+| `LOCAL_MODEL` | Fallback local LLM | `microsoft/DialoGPT-small` |
+| `EMBEDDING_MODEL` | Vector embedding model | `all-MiniLM-L6-v2` |
+| `QDRANT_URL` | Vector database URL | `http://localhost:6333` |
+| `REDIS_URL` | Cache database URL | `redis://localhost:6379` |
 
 ### Agent Configuration
-Each agent can be configured with:
-- Confidence thresholds
-- Response templates
-- Domain-specific knowledge
+Each agent can be customized through configuration files:
+- Confidence thresholds for response quality
+- Response templates and formatting
+- Domain-specific knowledge bases
+- API endpoints and data sources
 
-## ✅ Phase 6: Advanced Features (Complete)
+## 📈 Monitoring & Analytics
 
-### Production-Ready Enhancements
-- ✅ **Monitoring & Observability**
-  - Prometheus metrics collection
-  - Grafana dashboards
-  - Comprehensive health checks
-  - Application performance monitoring
+### Production Monitoring Stack
+- **Prometheus**: Metrics collection and storage
+- **Grafana**: Visualization and dashboards
+- **Redis**: Query caching and session management
+- **Structured Logging**: Comprehensive application logs
 
-- ✅ **Caching & Performance**
-  - Redis-based query caching
-  - Response time optimization
-  - Cache hit/miss analytics
-  - Intelligent cache invalidation
+### Key Metrics
+- Query response times and success rates
+- Agent performance and accuracy
+- Cache hit/miss ratios
+- System resource utilization
+- User interaction patterns
 
-- ✅ **Security & Rate Limiting**
-  - IP-based rate limiting (10 queries/minute)
-  - API key authentication
-  - Automatic IP blocking for abuse
-  - Security headers and CORS protection
+### Health Checks
+- Database connectivity
+- External API availability
+- Agent system status
+- Cache service health
+- Overall system performance
 
-- ✅ **Production Infrastructure**
-  - Docker containerization with monitoring stack
-  - Health checks for all services
-  - Logging with structured output
-  - Error handling and recovery
+## 🔒 Security & Performance
 
-## 🚀 Phase 7: Next Steps
+### Security Features
+- **Rate Limiting**: 10 queries per minute per IP
+- **API Key Authentication**: For administrative endpoints
+- **Input Validation**: Comprehensive query sanitization
+- **CORS Protection**: Cross-origin request handling
+- **Automatic IP Blocking**: Protection against abuse
 
-### Future Enhancements
-- [ ] **Enhanced Mobile Features**
-  - Offline mode with local data sync
-  - Push notifications for weather alerts
-  - Image recognition for crop diseases
+### Performance Optimizations
+- **Redis Caching**: Intelligent query result caching
+- **Response Compression**: Reduced bandwidth usage
+- **Async Processing**: Non-blocking agent execution
+- **Connection Pooling**: Efficient database connections
+- **Load Balancing**: Horizontal scaling support
 
-- [ ] **Multi-language Support**
-  - Hindi/English support
-  - Regional language agents
-  - Voice recognition improvements
-
-- [ ] **Advanced Analytics**
-  - User behavior insights
-  - Predictive analytics
-  - Seasonal trend analysis
-
-- [ ] **LangGraph Enhancements**
-  - Parallel agent execution
-  - Advanced workflow patterns
-  - Conversation memory and context
-  - Custom workflow templates
 
 ## 🤝 Contributing
 
+### Development Setup
 1. Fork the repository
-2. Create a feature branch
-3. Make your changes
-4. Add tests
+2. Create a feature branch: `git checkout -b feature/amazing-feature`
+3. Make your changes and add tests
+4. Run the test suite: `python scripts/test_all_agents.py`
 5. Submit a pull request
 
-## 📄 License
+### Code Standards
+- Follow PEP 8 for Python code
+- Use Flutter linting rules for mobile code
+- Add comprehensive tests for new features
+- Update documentation for API changes
 
-MIT License - see LICENSE file for details
 
-## 🆘 Support
+## 🆘 Support & Troubleshooting
 
-For issues and questions:
-1. Check the troubleshooting section
-2. Review existing issues
-3. Create a new issue with detailed information
+### Common Issues
+1. **API Key Issues**: Ensure `GEMINI_API_KEY` is set correctly
+
+
+### Getting Help
+1. Check the troubleshooting section in this README
+2. Review existing GitHub issues
+3. Create a new issue with detailed information including:
+   - Error messages and logs
+   - Environment details
+   - Steps to reproduce
+   - Expected vs actual behavior
 
 ---
 
-**Status**: Phase 6 in progress - Advanced features and production readiness
+
+*KrishMitraAI - Empowering farmers with intelligent agricultural guidance*
 
