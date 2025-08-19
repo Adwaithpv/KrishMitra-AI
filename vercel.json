@@ -7,7 +7,11 @@
     },
     {
       "src": "clients/mobile/pubspec.yaml",
-      "use": "vercel-flutter" 
+      "use": "@vercel/static-build",
+      "config": {
+        "buildCommand": "cd clients/mobile && flutter pub get && flutter build web",
+        "distDir": "clients/mobile/build/web"
+      }
     }
   ],
   "routes": [
@@ -17,7 +21,7 @@
     },
     {
       "src": "/(.*)",
-      "dest": "/clients/mobile/$1"
+      "dest": "/$1"
     }
   ]
 }
