@@ -1,5 +1,8 @@
 {
     "name": "flutter-frontend",
     "version": "1.0.0",
-    "private": true
+    "private": true,
+    "scripts": {
+      "vercel-build": "flutter pub get && flutter build web"
+    }
   }

@@ -9,7 +9,6 @@
       "src": "clients/mobile/package.json",
       "use": "@vercel/static-build",
       "config": {
-        "buildCommand": "cd clients/mobile && flutter pub get && flutter build web",
         "distDir": "clients/mobile/build/web"
       }
     }
