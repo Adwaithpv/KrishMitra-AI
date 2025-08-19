@@ -7,7 +7,7 @@
     },
     {
       "src": "clients/mobile/pubspec.yaml",
-      "use": "@vercel/flutter"
+      "use": "vercel-flutter" 
     }
   ],
   "routes": [
