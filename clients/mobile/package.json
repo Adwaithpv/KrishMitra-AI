@@ -3,6 +3,6 @@
     "version": "1.0.0",
     "private": true,
     "scripts": {
-      "vercel-build": "flutter pub get && flutter build web"
+      "vercel-build": "git clone https://github.com/flutter/flutter.git && ./flutter/bin/flutter config --enable-web && ./flutter/bin/flutter pub get && ./flutter/bin/flutter build web"
     }
   }
