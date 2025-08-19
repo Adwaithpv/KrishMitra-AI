@@ -6,7 +6,7 @@
       "use": "@vercel/python"
     },
     {
-      "src": "clients/mobile/pubspec.yaml",
+      "src": "clients/mobile/package.json",
       "use": "@vercel/static-build",
       "config": {
         "buildCommand": "cd clients/mobile && flutter pub get && flutter build web",
