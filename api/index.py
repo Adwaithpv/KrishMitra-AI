@@ -1,11 +1,6 @@
-import sys
-import os
-
-# Add the services/api directory to the Python path
-sys.path.append(os.path.join(os.path.dirname(__file__), '..', 'services', 'api'))
-
-# Import the FastAPI app from the main module
+# Vercel's build environment will recognize the 'services' directory as a package.
+# This imports the 'app' object from your main application file.
 from services.api.app.main import app
 
-# Export the app for Vercel
-handler = app
+# Vercel automatically detects and serves the variable named 'app'.
+# You don't need to rename it to 'handler'.
